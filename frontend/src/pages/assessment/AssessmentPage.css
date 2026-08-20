@@ -6,7 +6,35 @@
 }
 
 .assessment-center {
-  max-width: 46rem;
+  max-width: 48rem;
+}
+
+.assessment-intro-card {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background:
+    radial-gradient(26rem 18rem at 110% -20%, rgb(86 155 214 / 0.25), transparent 62%),
+    radial-gradient(20rem 16rem at -10% 120%, rgb(232 239 255 / 0.9), transparent 60%),
+    var(--color-bg);
+}
+
+.assessment-intro-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0c47a0, #1972e8, #569bd6);
+}
+
+.assessment-introduction {
+  position: relative;
+}
+
+.assessment-introduction .badge {
+  margin-bottom: var(--space-3);
 }
 
 .assessment-topbar {

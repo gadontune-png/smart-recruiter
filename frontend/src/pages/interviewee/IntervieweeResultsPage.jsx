@@ -50,7 +50,7 @@ function IntervieweeResultsPage() {
   return (
     <div className="interviewee-results">
       <div className="page-header">
-        <p className="breadcrumb">AssessHub / Assessment Report</p>
+        <p className="breadcrumb">Smart Recruiter / Assessment Report</p>
         <h1>{ASSESSMENT.title}</h1>
         <p className="page-header-desc">{ASSESSMENT.completed}</p>
       </div>

@@ -54,6 +54,7 @@
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -174,6 +175,43 @@ a:hover {
 
 button {
   font-family: inherit;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --color-primary: #3d8bfd;
+  --color-primary-dark: #1a5fc9;
+  --color-primary-light: #6cb0ff;
+  --color-primary-50: #16233d;
+  --color-primary-100: #1d2f52;
+  --color-indigo: #6c63ff;
+  --color-sky: #38bdf8;
+  --color-secondary: #3d8bfd;
+  --color-secondary-dark: #1a5fc9;
+  --color-bg: #161b26;
+  --color-bg-subtle: #10141d;
+  --color-bg-muted: #1e2532;
+  --color-surface-raised: #1c2330;
+  --color-text: #e9edf4;
+  --color-text-muted: #9aa6b8;
+  --color-text-inverse: #ffffff;
+  --color-border: #2a3341;
+  --color-border-strong: #3a4657;
+
+  --color-success: #34d17b;
+  --color-success-bg: rgba(30, 142, 61, 0.16);
+  --color-warning: #f0a728;
+  --color-warning-bg: rgba(175, 96, 0, 0.16);
+  --color-danger: #f2605a;
+  --color-danger-bg: rgba(216, 48, 38, 0.16);
+  --color-info: #3d8bfd;
+  --color-info-bg: #16233d;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.45), 0 4px 6px -4px rgb(0 0 0 / 0.35);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-focus: 0 0 0 4px rgb(61 139 253 / 0.25);
 }
 
 /* Responsive breakpoints */

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 import { ROLES, ROUTES } from "../../utils/constants";
 
 function Topbar({ onToggleSidebar }) {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [query, setQuery] = useState("");
 
   const home =
@@ -64,6 +66,14 @@ function Topbar({ onToggleSidebar }) {
       <div className="topbar-actions">
         {user ? (
           <>
+            <button
+              type="button"
+              className="topbar-icon-btn"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <Link
               to={
                 isRecruiter

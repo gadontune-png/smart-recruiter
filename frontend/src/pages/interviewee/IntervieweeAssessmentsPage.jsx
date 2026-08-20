@@ -113,8 +113,8 @@ function IntervieweeAssessmentsPage() {
     <div className="interviewee-assessments">
       <div className="assessments-header">
         <div className="page-header">
-          <p className="breadcrumb">Smart Recruiter / My Assessments</p>
-          <h1>My Assessments</h1>
+          <p className="breadcrumb">Smart Recruiter / My Invitations</p>
+          <h1>Invitations &amp; Updates</h1>
           <p className="page-header-desc">
             Manage your assessment invitations and stay updated.
           </p>

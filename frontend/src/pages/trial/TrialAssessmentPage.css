@@ -21,6 +21,23 @@
 
 .trial-landing-card {
   padding: var(--space-10);
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background:
+    radial-gradient(26rem 18rem at 110% -20%, rgb(86 155 214 / 0.22), transparent 62%),
+    radial-gradient(20rem 16rem at -10% 120%, rgb(232 239 255 / 0.85), transparent 60%),
+    var(--color-bg);
+}
+
+.trial-landing-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0c47a0, #1972e8, #569bd6);
 }
 
 .trial-landing-top {

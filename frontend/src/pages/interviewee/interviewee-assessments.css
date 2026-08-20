@@ -11,10 +11,38 @@
   align-items: flex-start;
   gap: var(--space-6);
   margin-bottom: var(--space-8);
+  padding: var(--space-8) var(--space-8);
+  background:
+    radial-gradient(24rem 14rem at 110% -30%, rgb(86 155 214 / 0.18), transparent 62%),
+    radial-gradient(18rem 12rem at -8% 120%, rgb(232 239 255 / 0.8), transparent 60%),
+    var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.assessments-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #0c47a0, #1972e8, #569bd6);
 }
 
 .assessments-header p {
   color: var(--color-text-muted);
+}
+
+.assessments-header h1 {
+  margin-bottom: var(--space-2);
+}
+
+.assessments-header .page-header {
+  margin: 0;
 }
 
 .notification-wrapper {
