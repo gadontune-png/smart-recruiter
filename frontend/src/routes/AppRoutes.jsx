@@ -18,6 +18,8 @@ import IntervieweeResultsPage from "../pages/interviewee/IntervieweeResultsPage"
 
 import AssessmentPage from "../pages/assessment/AssessmentPage";
 
+import TrialAssessmentPage from "../pages/trial/TrialAssessmentPage";
+
 export const router = createBrowserRouter([
   {
     element: <GuestOnly />,
@@ -82,6 +84,12 @@ export const router = createBrowserRouter([
                 path: ROUTES.INTERVIEWEE.RESULTS,
                 element: <IntervieweeResultsPage />,
               },
+
+              {
+                 path: "/trial",
+                element: <TrialAssessmentPage />,
+            },
+
             ],
           },
           {
