@@ -24,6 +24,8 @@ export const ROUTES = Object.freeze({
     DASHBOARD: "/interviewee/dashboard",
     ASSESSMENTS: "/interviewee/assessments",
     RESULTS: "/interviewee/results",
+    INVITATIONS: "/interviewee/invitations",
+    NOTIFICATIONS: "/interviewee/notifications",
   },
   ASSESSMENT: "/assessment/:id",
 });

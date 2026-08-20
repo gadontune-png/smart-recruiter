@@ -1,0 +1,244 @@
+.interviewee-assessments {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8);
+}
+
+.assessments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.assessments-header p {
+  color: var(--color-text-muted);
+}
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  color: white;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 24rem;
+  max-height: 30rem;
+  overflow-y: auto;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+
+.notification-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notification-dropdown-header button {
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.notification-item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: var(--color-bg-subtle);
+}
+
+.notification-item.unread,
+.notification-row.unread {
+  background: var(--color-primary-50);
+}
+
+.notification-item p,
+.notification-row p {
+  margin: var(--space-1) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notification-item small,
+.notification-row small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-100);
+  color: var(--color-primary);
+}
+
+.confirmation-message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid rgb(22 163 74 / 0.2);
+  border-radius: var(--radius-md);
+}
+
+section {
+  margin-bottom: var(--space-10);
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.invitation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.invitation-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.invitation-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.invitation-title-row h3 {
+  margin: 0;
+}
+
+.invitation-content > p {
+  color: var(--color-text-muted);
+}
+
+.invitation-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.invitation-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.notifications-section .card {
+  overflow: hidden;
+}
+
+.notification-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notification-row:last-child {
+  border-bottom: none;
+}
+
+.notification-row-content {
+  flex: 1;
+}
+
+/* Tablet */
+@media (max-width: 800px) {
+  .assessments-header {
+    flex-direction: column;
+  }
+
+  .invitation-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .invitation-actions {
+    width: 100%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .interviewee-assessments {
+    padding: var(--space-4);
+  }
+
+  .notification-dropdown {
+    position: fixed;
+    top: var(--header-height);
+    left: var(--space-4);
+    right: var(--space-4);
+    width: auto;
+  }
+
+  .invitation-details {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .invitation-actions {
+    flex-direction: column;
+  }
+
+  .invitation-actions .btn {
+    width: 100%;
+  }
+
+  .notification-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
