@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
@@ -65,9 +65,30 @@ function AssessmentPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
-
+  const [timeLeft, setTimeLeft] = useState(60 * 60);
   const question = QUESTIONS[currentQuestion];
   const selectedAnswer = answers[question.id];
+
+  useEffect(() => {
+  if (submitted) {
+    return;
+  }
+
+  if (timeLeft <= 0) {
+    return;
+  }
+
+  const timer = setInterval(() => {
+    setTimeLeft((previousTime) => previousTime - 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [timeLeft, submitted]);
+
+const minutes = Math.floor(timeLeft / 60);
+const seconds = timeLeft % 60;
+
+const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   const handleAnswer = (answer) => {
     setAnswers((previousAnswers) => ({
@@ -126,11 +147,16 @@ function AssessmentPage() {
           </p>
         </div>
 
-        <Badge variant="info">
-          Question {currentQuestion + 1} of {QUESTIONS.length}
-        </Badge>
-      </div>
+        <div className="assessment-header-info">
+  <Badge variant="info">
+    Question {currentQuestion + 1} of {QUESTIONS.length}
+  </Badge>
 
+  <Badge variant={timeLeft <= 300 ? "danger" : "warning"}>
+    Time left: {formattedTime}
+  </Badge>
+</div>
+</div>
       <div className="assessment-progress">
         <div
           className="assessment-progress-bar"

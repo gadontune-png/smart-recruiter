@@ -153,6 +153,13 @@
   color: var(--color-text-muted);
 }
 
+.assessment-header-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 @media (max-width: 767px) {
   .assessment-page {
     padding: var(--space-4);
@@ -169,4 +176,10 @@
   .assessment-actions .btn {
     width: 100%;
   }
+
+  .assessment-header-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+
 }
