@@ -1,107 +1,68 @@
-# Smart Recruiter — DebugMasters
+# Smart Recruiter — Frontend
 
-> A technical assessment and automated interview platform for evaluating software development candidates.
+> React + Redux Toolkit frontend for the Smart Recruiter technical assessment platform.
 
-Smart Recruiter is a web-based technical assessment platform inspired by platforms such as Coderbyte. It allows recruiters to create and manage technical assessments while giving interviewees a structured environment to complete coding challenges, multiple-choice questions, subjective questions, and whiteboard exercises.
+## Stack
 
-The platform is being developed by **DebugMasters** as a full-stack application.
+- React 19 + Vite
+- Redux Toolkit (state) + React Redux
+- React Router (routing)
+- ESLint (JS, JSX, React Hooks, React Refresh)
 
----
+## Getting started
 
-## Project Overview
+```bash
+npm install
+npm run dev        # start dev server (http://localhost:5173)
+npm run build      # production build
+npm run preview    # preview production build
+npm run lint       # ESLint
+```
 
-### Problem
+### Demo accounts (mock mode, default)
 
-Traditional technical interviews can be time-consuming and difficult to standardize. Interviewers need to manually prepare questions, monitor candidates, evaluate answers, and manage feedback.
+| Role        | Email                    | Password   |
+| ----------- | ------------------------ | ---------- |
+| Recruiter   | recruiter@demo.com       | secret123  |
+| Interviewee | interviewee@demo.com     | secret123  |
 
-Smart Recruiter aims to automate and organize this process through a centralized assessment platform.
+Copy `.env.example` to `.env` to configure the API URL (`VITE_API_URL`)
+and disable mock mode (`VITE_ENABLE_MOCK=false`) once the backend is live.
 
-### Goal
+## Project structure
 
-Build a platform where:
+```
+src/
+├── app/          Redux store configuration
+├── assets/       Static assets
+├── components/
+│   ├── common/   Reusable UI primitives (Button, Card, Modal, …)
+│   ├── forms/    Form primitives (Input, Select, Checkbox, …)
+│   └── layout/   App shell, Navbar, Sidebar, layouts
+├── features/     Feature slices (auth, ui, assessments, results, …)
+├── hooks/        Custom hooks (useAuth, useMediaQuery, …)
+├── pages/        Route pages (auth, recruiter, interviewee, assessment)
+├── routes/       Router config + route guards
+├── services/     API service layer
+├── utils/        Shared constants & validation helpers
+```
 
-- Recruiters can create and publish technical assessments.
-- Interviewees can receive and accept assessment invitations.
-- Candidates can complete assessments within a defined time limit.
-- Coding and whiteboard challenges can be submitted digitally.
-- Recruiters can review answers and provide feedback.
-- Results and performance statistics can be generated and reviewed.
-- Interviewees can access feedback after grades are released.
+Custom feature folders (for other team members) will live under `src/features/`
+and `src/pages/`, reusing the common components and design tokens.
 
----
+## Design system
 
-# Core User Types
+Design tokens (colors, typography, spacing, radius, shadows, status colors,
+responsive breakpoints) live in `src/index.css` under `:root`. All member
+contributions must use these CSS custom properties (e.g. `var(--color-primary)`)
+instead of ad-hoc values.
 
-The platform has two primary user types.
+## Routing
 
-## Recruiter
+- `/login`, `/register` — public, redirect logged-in users to their home
+- `/recruiter/*` — recruiter-only (requires `recruiter` role)
+- `/interviewee/*` — interviewee-only (requires `interviewee` role)
+- `/assessment/:id` — authenticated
+- `*` → 404 page
 
-Recruiters can:
-
-- Create assessments.
-- Add multiple-choice questions.
-- Add subjective/free-text questions.
-- Add coding challenges/Katas.
-- Review and publish assessments.
-- Invite interviewees individually or in bulk.
-- Set assessment time limits.
-- View submitted assessments.
-- Sort interviewees by scores.
-- View performance statistics.
-- Review individual answers.
-- Leave feedback on answers.
-- Release grades.
-
-## Interviewee
-
-Interviewees can:
-
-- Log in to the platform.
-- View available assessments.
-- Accept assessment invitations.
-- Receive assessment notifications.
-- View assessment schedules.
-- Take trial assessments.
-- Take actual assessments.
-- See a live countdown timer.
-- Submit BDD.
-- Submit pseudocode.
-- Submit code.
-- Complete whiteboard/coding challenges.
-- View released grades and mentor feedback.
-
----
-
-# Technology Stack
-
-## Frontend
-
-- React.js
-- JavaScript
-- Redux Toolkit
-- React Router
-- Vite
-- ESLint
-
-## Backend
-
-- Python
-- Flask or FastAPI
-
-## Database
-
-- PostgreSQL
-
-## Testing
-
-- Jest
-- Python unit testing / Minittest
-
-## External API
-
-- Codewars API
-
-The Codewars API will be consumed to provide toy programming problems that can be used for whiteboarding challenges and sample/trial assessments.
-
----
-
+Route guards live in `src/routes/guards.jsx`.

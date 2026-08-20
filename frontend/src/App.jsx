@@ -1,9 +1,12 @@
+import { RouterProvider } from "react-router-dom";
+import { ToastProvider } from "./components/common";
+import { router } from "./routes/AppRoutes";
+
 function App() {
   return (
-    <div>
-      <h1>Smart Recruiter</h1>
-      <p>DebugMasters</p>
-    </div>
+    <ToastProvider>
+      <RouterProvider router={router} />
+    </ToastProvider>
   );
 }
 
