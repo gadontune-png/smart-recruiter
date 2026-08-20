@@ -97,27 +97,9 @@ function Sidebar({ isOpen, onClose }) {
                 .join("")
                 .toUpperCase() || "U"}
             </span>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {user.name}
-              </div>
-              <div
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  textTransform: "capitalize",
-                }}
-              >
-                {user.role}
-              </div>
+            <div className="sidebar-profile-meta">
+              <div className="sidebar-profile-name">{user.name}</div>
+              <div className="sidebar-profile-role">{user.role}</div>
             </div>
           </NavLink>
         )}
