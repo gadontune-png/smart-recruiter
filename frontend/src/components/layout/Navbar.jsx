@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Bell, Menu, Search } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES, ROUTES } from "../../utils/constants";
-import UserMenu from "./UserMenu";
 
 function Topbar({ onToggleSidebar }) {
   const { user } = useAuth();
@@ -25,6 +24,13 @@ function Topbar({ onToggleSidebar }) {
     : ROUTES.INTERVIEWEE.ASSESSMENTS;
 
   const roleLabel = isRecruiter ? "System Admin" : "Developer Role";
+
+  const initials = user?.name
+    ?.split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() ?? "U";
 
   return (
     <header className="topbar">
@@ -69,21 +75,15 @@ function Topbar({ onToggleSidebar }) {
             >
               <Bell size={20} />
             </Link>
-            <UserMenu />
-            <div className="topbar-user">
+            <Link to={ROUTES.PROFILE} className="topbar-user" aria-label="View profile">
               <span className="avatar" aria-hidden="true">
-                {user.name
-                  ?.split(" ")
-                  .map((part) => part[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase() || "U"}
+                {initials}
               </span>
               <div className="topbar-user-meta">
                 <strong>{user.name}</strong>
                 <span>{roleLabel}</span>
               </div>
-            </div>
+            </Link>
           </>
         ) : (
           <>

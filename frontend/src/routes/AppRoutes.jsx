@@ -29,6 +29,8 @@ import TrialAssessmentPage from "../pages/trial/TrialAssessmentPage";
 
 import WhiteboardPage from "../pages/whiteboard/WhiteboardPage";
 
+import ProfilePage from "../pages/profile/ProfilePage";
+
 export const router = createBrowserRouter([
   {
     element: <GuestOnly />,
@@ -61,6 +63,10 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
+          {
+            path: ROUTES.PROFILE,
+            element: <ProfilePage />,
+          },
           {
             element: <RequireRole roles={[ROLES.RECRUITER]} />,
             children: [

@@ -88,7 +88,7 @@ function Sidebar({ isOpen, onClose }) {
         ))}
 
         {user && (
-          <div className="sidebar-profile">
+          <NavLink to={ROUTES.PROFILE} className="sidebar-profile" onClick={onClose}>
             <span className="avatar" aria-hidden="true">
               {user.name
                 ?.split(" ")
@@ -119,7 +119,7 @@ function Sidebar({ isOpen, onClose }) {
                 {user.role}
               </div>
             </div>
-          </div>
+          </NavLink>
         )}
       </aside>
     </>

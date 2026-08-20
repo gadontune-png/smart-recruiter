@@ -10,16 +10,52 @@
   margin-bottom: var(--space-6);
   border-radius: var(--radius-2xl);
   background:
-    radial-gradient(30rem 20rem at 100% -20%, rgb(86 155 214 / 0.5), transparent 60%),
-    linear-gradient(135deg, #0c47a0 0%, #1972e8 65%, #569bd6 100%);
+    radial-gradient(34rem 22rem at 108% -30%, rgb(86 155 214 / 0.55), transparent 62%),
+    radial-gradient(24rem 18rem at -12% 125%, rgb(12 71 160 / 0.65), transparent 60%),
+    linear-gradient(135deg, #0c47a0 0%, #1669dc 62%, #3f8be8 100%);
   color: var(--color-text-inverse);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 
+.welcome-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 255 255 / 0.13) 1px, transparent 1px);
+  background-size: 20px 20px;
+  mask-image: radial-gradient(28rem 16rem at 18% -10%, black, transparent 68%);
+  pointer-events: none;
+}
+
+.welcome-banner > * {
+  position: relative;
+}
+
+.welcome-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.85);
+}
+
+.welcome-kicker .welcome-pulse {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  box-shadow: 0 0 0 4px rgb(30 142 61 / 0.35);
+}
+
 .welcome-banner h1 {
   color: var(--color-text-inverse);
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-3xl);
+  letter-spacing: -0.02em;
   margin-bottom: var(--space-2);
 }
 
@@ -37,9 +73,13 @@
 
 .welcome-badge {
   display: inline-flex;
-  padding: var(--space-1) var(--space-4);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-full);
-  background: rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.15);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  backdrop-filter: blur(6px);
   font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;

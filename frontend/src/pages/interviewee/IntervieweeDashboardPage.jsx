@@ -49,6 +49,10 @@ function IntervieweeDashboardPage() {
 
       <section className="welcome-banner">
         <div>
+          <span className="welcome-kicker">
+            <span className="welcome-pulse" aria-hidden="true" />
+            Interview Ready
+          </span>
           <h1>Welcome back, Alex Rivera!</h1>
           <p>
             &quot;The beautiful thing about learning is nobody can take it away

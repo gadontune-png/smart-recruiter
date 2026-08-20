@@ -14,6 +14,7 @@ export const ROUTES = Object.freeze({
   LOGIN: "/login",
   REGISTER: "/register",
   NOT_FOUND: "/404",
+  PROFILE: "/profile",
   RECRUITER: {
     DASHBOARD: "/recruiter/dashboard",
     ASSESSMENTS: "/recruiter/assessments",
