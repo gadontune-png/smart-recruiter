@@ -271,6 +271,52 @@ function IntervieweeAssessmentsPage() {
         )}
       </section>
 
+      <section className="trial-assessment-section">
+        <div className="section-heading">
+          <h2>Practice Assessment</h2>
+          <Badge variant="info">Trial</Badge>
+        </div>
+
+        <Card padded>
+          <div className="invitation-card">
+            <div className="invitation-content">
+              <div className="invitation-title-row">
+                <h3>Trial Assessment</h3>
+
+                <Badge variant="info">Practice</Badge>
+              </div>
+
+              <p>
+                Get familiar with the assessment experience before taking a
+                real technical assessment.
+              </p>
+
+              <div className="invitation-details">
+                <span>
+                  <strong>Questions:</strong> 3
+                </span>
+
+                <span>
+                  <strong>Types:</strong> Multiple Choice, Free Text & Coding
+                </span>
+
+                <span>
+                  <strong>Mode:</strong> Trial
+                </span>
+              </div>
+            </div>
+            <div className="invitation-actions">
+              <Button
+                size="sm"
+                onClick={() => navigate("/trial")}
+              >
+                Start Trial
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </section>
+      
       <section className="notifications-section">
         <div className="section-heading">
           <h2>Recent Notifications</h2>
