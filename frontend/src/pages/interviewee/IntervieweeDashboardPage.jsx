@@ -131,11 +131,29 @@ if (!hasAssessments) {
 
         <div className="quick-actions">
           <Button onClick={() => navigate("/interviewee/assessments")}>
-  View Assessments
-</Button>
-          <Button onClick={() => navigate("/interviewee/results")} variant="secondary">
-  View Results
-</Button>
+            View Assessments
+          </Button>
+
+          <Button
+            onClick={() => navigate("/interviewee/invitations")}
+            variant="secondary"
+          >
+            View Invitations
+          </Button>
+
+          <Button
+            onClick={() => navigate("/interviewee/notifications")}
+            variant="secondary"
+          >
+            View Notifications
+          </Button>
+
+          <Button
+            onClick={() => navigate("/interviewee/results")}
+            variant="secondary"
+          >
+            View Results
+          </Button>
         </div>
       </div>
 

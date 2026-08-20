@@ -1,7 +1,9 @@
 .whiteboard-page {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   padding: var(--space-8);
+  box-sizing: border-box;
 }
 
 .whiteboard-header {
@@ -37,6 +39,7 @@
 .whiteboard-sidebar {
   position: sticky;
   top: var(--space-6);
+  min-width: 0;
 }
 
 .whiteboard-sidebar h2 {
@@ -79,7 +82,12 @@
   margin-bottom: var(--space-2);
 }
 
+.whiteboard-main {
+  min-width: 0;
+}
+
 .editor-section {
+  width: 100%;
   margin-bottom: var(--space-8);
 }
 
@@ -105,6 +113,7 @@
 }
 
 .language-selector {
+  width: auto;
   min-width: 150px;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
@@ -112,11 +121,15 @@
   background: var(--color-bg);
   color: var(--color-text);
   font-size: var(--font-size-sm);
+  box-sizing: border-box;
 }
 
 .whiteboard-editor,
 .code-editor {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -124,6 +137,7 @@
   resize: vertical;
   font-size: var(--font-size-base);
   line-height: 1.6;
+  box-sizing: border-box;
 }
 
 .whiteboard-editor:focus,
@@ -167,6 +181,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-width: 0;
 }
 
 .whiteboard-submit span {
@@ -198,14 +213,17 @@
   justify-content: center;
   padding: var(--space-4);
   background: rgb(0 0 0 / 45%);
+  box-sizing: border-box;
 }
 
 .whiteboard-modal {
   width: min(520px, 100%);
+  max-width: 100%;
   padding: var(--space-8);
   background: var(--color-bg);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  box-sizing: border-box;
 }
 
 .whiteboard-modal h2 {
@@ -264,7 +282,12 @@
   gap: var(--space-3);
 }
 
+/* Tablet */
 @media (max-width: 900px) {
+  .whiteboard-page {
+    padding: var(--space-6);
+  }
+
   .whiteboard-layout {
     grid-template-columns: 1fr;
   }
@@ -274,11 +297,18 @@
   }
 }
 
+/* Mobile */
 @media (max-width: 767px) {
   .whiteboard-page {
-    padding: var(--space-4);
     width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: var(--space-4);
     overflow-x: hidden;
+  }
+
+  .whiteboard-page * {
+    box-sizing: border-box;
   }
 
   .whiteboard-header {
@@ -295,12 +325,28 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    gap: var(--space-4);
   }
 
   .whiteboard-sidebar,
   .whiteboard-main {
     width: 100%;
     min-width: 0;
+  }
+
+  .whiteboard-sidebar {
+    margin-bottom: 0;
+  }
+
+  .whiteboard-main .card {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .editor-section {
+    width: 100%;
+    max-width: 100%;
   }
 
   .editor-header {
@@ -311,17 +357,17 @@
 
   .language-selector {
     width: 100%;
+    max-width: 100%;
   }
 
   .whiteboard-editor,
   .code-editor {
     width: 100%;
     max-width: 100%;
-    box-sizing: border-box;
+    min-width: 0;
   }
 
   .editor-actions {
-    display: flex;
     flex-direction: column;
     width: 100%;
     gap: var(--space-2);
@@ -329,11 +375,10 @@
 
   .editor-actions .btn {
     width: 100%;
-    box-sizing: border-box;
+    max-width: 100%;
   }
 
   .whiteboard-submit {
-    display: flex;
     flex-direction: column;
     align-items: stretch;
     width: 100%;
@@ -342,17 +387,20 @@
 
   .whiteboard-submit .btn {
     width: 100%;
-    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  .whiteboard-modal-backdrop {
+    padding: var(--space-4);
   }
 
   .whiteboard-modal {
-    width: calc(100% - 2rem);
-    max-width: none;
-    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding: var(--space-6);
   }
 
   .whiteboard-modal-actions {
-    display: flex;
     flex-direction: column-reverse;
     width: 100%;
     gap: var(--space-2);
@@ -360,11 +408,10 @@
 
   .whiteboard-modal-actions .btn {
     width: 100%;
-    box-sizing: border-box;
+    max-width: 100%;
   }
 
   .whiteboard-complete-actions {
-    display: flex;
     flex-direction: column;
     width: 100%;
     gap: var(--space-2);
@@ -372,123 +419,6 @@
 
   .whiteboard-complete-actions .btn {
     width: 100%;
-  }
-
-@media screen and (max-width: 767px) {
-  .whiteboard-page {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 16px;
-    box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  .whiteboard-page * {
-    box-sizing: border-box;
-  }
-
-  .whiteboard-header {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    gap: 16px;
-  }
-
-  .whiteboard-layout {
-    display: block;
-    width: 100%;
-  }
-
-  .whiteboard-sidebar {
-    position: static;
-    width: 100%;
-    margin-bottom: 16px;
-  }
-
-  .whiteboard-main {
-    width: 100%;
-  }
-
-  .whiteboard-main .card {
-    width: 100%;
-    overflow: hidden;
-  }
-
-  .editor-section {
-    width: 100%;
     max-width: 100%;
   }
-
-  .editor-header {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-    gap: 12px;
-  }
-
-  .language-selector {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .whiteboard-editor,
-  .code-editor {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  .editor-actions {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .editor-actions button,
-  .editor-actions .btn {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .whiteboard-submit {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-    gap: 16px;
-  }
-
-  .whiteboard-submit button,
-  .whiteboard-submit .btn {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .whiteboard-modal-backdrop {
-    padding: 16px;
-  }
-
-  .whiteboard-modal {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .whiteboard-modal-actions {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .whiteboard-modal-actions button,
-  .whiteboard-modal-actions .btn {
-    width: 100%;
-  }
-}
 }

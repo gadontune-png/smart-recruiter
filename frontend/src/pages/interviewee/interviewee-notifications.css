@@ -1,0 +1,213 @@
+.interviewee-notifications {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8);
+}
+
+.notifications-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.notifications-header h1 {
+  margin-bottom: var(--space-2);
+}
+
+.notifications-header p:last-child {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.notifications-label {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.notifications-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.notifications-summary .card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.notifications-summary span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notifications-summary strong {
+  font-size: var(--font-size-2xl);
+}
+
+.notifications-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.notifications-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.notification-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.notification-title-wrap h2 {
+  margin: 0;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.notification-item.unread {
+  border-left: 3px solid var(--color-primary);
+  padding-left: var(--space-3);
+}
+
+.notification-badge-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-100);
+  color: var(--color-primary-dark);
+  flex-shrink: 0;
+}
+
+.notification-meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.notification-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+}
+
+.notification-meta h3 {
+  margin: 0;
+}
+
+.notification-meta p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.notification-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notification-footer small {
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 900px) {
+  .notifications-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .interviewee-notifications {
+    padding: var(--space-4);
+  }
+
+  .notifications-header,
+  .notifications-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+  }
+
+  .notifications-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notification-item .btn {
+    width: 100%;
+  }
+
+  .notification-badge-wrap {
+    flex-direction: column;
+  }
+
+  .notification-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
