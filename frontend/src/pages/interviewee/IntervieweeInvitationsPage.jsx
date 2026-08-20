@@ -1,191 +1,160 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Card from "../../components/common/Card";
+import { Bell, Check, ArrowRight, Building2, Play, X } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import EmptyState from "../../components/common/EmptyState";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../utils/constants";
 import "./interviewee-invitations.css";
 
-const INVITATIONS = [
+const PENDING = [
   {
     id: 1,
-    title: "Frontend Developer Assessment",
-    description:
-      "Test your knowledge of JavaScript, React, HTML, CSS, and frontend development fundamentals.",
-    date: "August 21, 2026",
-    time: "10:00 AM - 11:00 AM",
-    duration: "60 minutes",
-    status: "Pending",
+    company: "Stripe Inc.",
+    role: "Senior Backend Engineer Challenge",
+    deadline: "Oct 30, 2026",
+    estimate: "120 mins",
+    type: "Live Coding",
   },
   {
     id: 2,
-    title: "JavaScript Technical Assessment",
-    description:
-      "Complete a technical assessment covering JavaScript fundamentals and problem-solving.",
-    date: "August 24, 2026",
-    time: "2:00 PM - 3:00 PM",
-    duration: "60 minutes",
-    status: "Accepted",
+    company: "Vercel",
+    role: "Front-End Infrastructure Assessment",
+    deadline: "Nov 02, 2026",
+    estimate: "90 mins",
+    type: "Infrastructure, React Server Components",
+  },
+];
+
+const NOTIFICATIONS = [
+  {
+    title: "Stripe invited you to test",
+    sub: "Active till Oct 31, 2026",
+    read: false,
   },
   {
-    id: 3,
-    title: "React Developer Assessment",
-    description:
-      "Demonstrate your understanding of React components, hooks, state management, and UI development.",
-    date: "August 27, 2026",
-    time: "11:00 AM - 12:30 PM",
-    duration: "90 minutes",
-    status: "Declined",
+    title: "Scored: 82% (Excellent)",
+    sub: "Results: System Design Pro",
+    read: false,
   },
 ];
 
 function IntervieweeInvitationsPage() {
   const navigate = useNavigate();
+  const [invitations, setInvitations] = useState(PENDING);
+  const [notifications, setNotifications] = useState(NOTIFICATIONS);
 
-  const [invitations, setInvitations] = useState(INVITATIONS);
-  const [confirmation, setConfirmation] = useState(null);
+  function accept(id) {
+    setInvitations(invitations.filter((inv) => inv.id !== id));
+    navigate(ROUTES.ASSESSMENT.replace(":id", "7"));
+  }
 
-  const handleAccept = (id) => {
-    setInvitations((previousInvitations) =>
-      previousInvitations.map((invitation) =>
-        invitation.id === id
-          ? { ...invitation, status: "Accepted" }
-          : invitation
-      )
-    );
+  function decline(id) {
+    setInvitations(invitations.filter((inv) => inv.id !== id));
+  }
 
-    setConfirmation("Invitation accepted successfully.");
-  };
-
-  const handleDecline = (id) => {
-    setInvitations((previousInvitations) =>
-      previousInvitations.map((invitation) =>
-        invitation.id === id
-          ? { ...invitation, status: "Declined" }
-          : invitation
-      )
-    );
-
-    setConfirmation("Invitation declined.");
-  };
-
-  const getStatusVariant = (status) => {
-    if (status === "Accepted") {
-      return "success";
-    }
-
-    if (status === "Declined") {
-      return "danger";
-    }
-
-    return "warning";
-  };
+  function markAllRead() {
+    setNotifications(notifications.map((n) => ({ ...n, read: true })));
+  }
 
   return (
     <div className="interviewee-invitations">
-      <div className="invitations-header">
+      <div className="page-header invitations-header">
         <div>
-          <p className="invitations-label">Interviewee Portal</p>
-          <h1>Assessment Invitations</h1>
-          <p>
-            Review your assessment invitations and manage your upcoming
-            assessments.
-          </p>
+          <p className="breadcrumb">Smart Recruiter / My Invitations</p>
+          <h1>Invitations &amp; Updates</h1>
         </div>
-
-        <Button
-          variant="secondary"
-          onClick={() => navigate("/interviewee/dashboard")}
-        >
-          Back to Dashboard
-        </Button>
       </div>
 
-      {confirmation && (
-        <div className="invitation-confirmation">
-          <Badge variant="success">Success</Badge>
-          <span>{confirmation}</span>
-        </div>
-      )}
+      <div className="invite-layout">
+        <div className="invite-main">
+          <div className="panel-heading">
+            <h2>Pending Invitations</h2>
+            <Badge variant="info">{invitations.length} awaiting response</Badge>
+          </div>
 
-      <div className="invitations-list">
-        {invitations.length === 0 ? (
-          <EmptyState
-            title="No invitations"
-            description="You don't have any assessment invitations at the moment."
-          />
-        ) : (
-          invitations.map((invitation) => (
-            <Card key={invitation.id} padded>
-              <article className="invitation-card">
-                <div className="invitation-card-header">
-                  <div>
-                    <p className="invitations-label">Assessment Invitation</p>
-                    <h2>{invitation.title}</h2>
+          {invitations.length === 0 ? (
+            <div className="panel invite-empty">
+              <Check size={28} />
+              <p>You have no pending invitations. New ones will appear here.</p>
+            </div>
+          ) : (
+            <div className="invite-card-list">
+              {invitations.map((invitation) => (
+                <div className="panel invite-card-row" key={invitation.id}>
+                  <div className="company-badge">
+                    <Building2 size={22} />
                   </div>
-
-                  <Badge variant={getStatusVariant(invitation.status)}>
-                    {invitation.status}
-                  </Badge>
-                </div>
-
-                <p className="invitation-description">
-                  {invitation.description}
-                </p>
-
-                <div className="invitation-details">
-                  <div>
-                    <span>Date</span>
-                    <strong>{invitation.date}</strong>
+                  <div className="invite-content">
+                    <div className="invite-role">
+                      <strong>{invitation.company}</strong>
+                      <span>{invitation.role}</span>
+                    </div>
+                    <p className="invite-meta">
+                      Deadline: {invitation.deadline} · Estimate: {invitation.estimate} ·
+                      Type: {invitation.type}
+                    </p>
                   </div>
-
-                  <div>
-                    <span>Time</span>
-                    <strong>{invitation.time}</strong>
-                  </div>
-
-                  <div>
-                    <span>Duration</span>
-                    <strong>{invitation.duration}</strong>
-                  </div>
-
-                  <div>
-                    <span>Status</span>
-                    <strong>{invitation.status}</strong>
-                  </div>
-                </div>
-
-                {invitation.status === "Pending" && (
-                  <div className="invitation-actions">
-                    <Button onClick={() => handleAccept(invitation.id)}>
-                      Accept Invitation
-                    </Button>
-
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleDecline(invitation.id)}
-                    >
+                  <div className="invite-actions">
+                    <Button variant="secondary" onClick={() => decline(invitation.id)}>
+                      <X size={16} />
                       Decline
                     </Button>
-                  </div>
-                )}
-
-                {invitation.status === "Accepted" && (
-                  <div className="invitation-actions">
-                    <Button
-                      onClick={() => navigate("/assessment/1")}
-                    >
-                      View Assessment
+                    <Button onClick={() => accept(invitation.id)}>
+                      <Play size={16} />
+                      Accept &amp; Begin
                     </Button>
                   </div>
-                )}
-              </article>
-            </Card>
-          ))
-        )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="panel-heading older-heading">
+            <h2>Older Updates</h2>
+          </div>
+          <div className="panel older-panel">
+            <p>
+              <span className="older-dot" />
+              Results available for Cloud Infrastructure Challenge — <a href="#r">View Report</a>
+            </p>
+          </div>
+        </div>
+
+        <aside className="invite-side">
+          <div className="notifications-card">
+            <div className="notifications-card-head">
+              <Bell size={18} />
+              <strong>Notifications</strong>
+              <button type="button" onClick={markAllRead} className="mark-all">
+                Mark all as read
+              </button>
+            </div>
+            {notifications.length === 0 ? (
+              <p className="no-notifications">You are all caught up.</p>
+            ) : (
+              notifications.map((notification) => (
+                <div className={`notif-item ${notification.read ? "read" : ""}`} key={notification.title}>
+                  <span className={`notif-dot ${notification.read ? "" : "unread"}`} />
+                  <div>
+                    <strong>{notification.title}</strong>
+                    <span>{notification.sub}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="practice-card-side">
+            <h3>Sharpen your skills</h3>
+            <p>Try a trial assessment before the real thing. Free and unlimited.</p>
+            <Button variant="outline" onClick={() => navigate(ROUTES.TRIAL)}>
+              Start Practice <ArrowRight size={16} />
+            </Button>
+          </div>
+        </aside>
       </div>
     </div>
   );
 }
 
-export default IntervieweeInvitationsPage
+export default IntervieweeInvitationsPage;

@@ -1,7 +1,17 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, Users, Home, TrendingUp, Bell } from "lucide-react";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  FileQuestion,
+  Send,
+  TrendingUp,
+  Settings,
+  GraduationCap,
+  LineChart,
+  AppWindow,
+} from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { ROLES, ROUTES } from "../../utils/constants";
+import { ROLES, ROUTES, APP_NAME } from "../../utils/constants";
 
 const NAV_GROUPS = Object.freeze({
   [ROLES.RECRUITER]: [
@@ -10,7 +20,10 @@ const NAV_GROUPS = Object.freeze({
       items: [
         { label: "Dashboard", to: ROUTES.RECRUITER.DASHBOARD, icon: LayoutDashboard },
         { label: "Assessments", to: ROUTES.RECRUITER.ASSESSMENTS, icon: ClipboardList },
-        { label: "Candidates", to: ROUTES.RECRUITER.CANDIDATES, icon: Users },
+        { label: "Questions", to: ROUTES.RECRUITER.QUESTIONS, icon: FileQuestion },
+        { label: "Invitations", to: ROUTES.RECRUITER.INVITATIONS, icon: Send },
+        { label: "Results", to: ROUTES.RECRUITER.RESULTS, icon: TrendingUp },
+        { label: "Settings", to: ROUTES.RECRUITER.SETTINGS, icon: Settings },
       ],
     },
   ],
@@ -18,10 +31,11 @@ const NAV_GROUPS = Object.freeze({
     {
       heading: "Interviewee",
       items: [
-        { label: "Dashboard", to: ROUTES.INTERVIEWEE.DASHBOARD, icon: Home },
-        { label: "Assessments", to: ROUTES.INTERVIEWEE.ASSESSMENTS, icon: ClipboardList },
-        { label: "Notifications", to: ROUTES.INTERVIEWEE.NOTIFICATIONS, icon: Bell },
-        { label: "Results", to: ROUTES.INTERVIEWEE.RESULTS, icon: TrendingUp },
+        { label: "Dashboard", to: ROUTES.INTERVIEWEE.DASHBOARD, icon: GraduationCap },
+        { label: "My Assessments", to: ROUTES.INTERVIEWEE.ASSESSMENTS, icon: ClipboardList },
+        { label: "Practice", to: ROUTES.INTERVIEWEE.PRACTICE, icon: AppWindow },
+        { label: "Results", to: ROUTES.INTERVIEWEE.RESULTS, icon: LineChart },
+        { label: "Settings", to: ROUTES.INTERVIEWEE.SETTINGS, icon: Settings },
       ],
     },
   ],
@@ -44,6 +58,13 @@ function Sidebar({ isOpen, onClose }) {
         className={`sidebar ${isOpen ? "sidebar-open" : ""}`}
         aria-label="Sidebar navigation"
       >
+        <div className="sidebar-brand">
+          <span className="sidebar-logo" aria-hidden="true">
+            SR
+          </span>
+          {APP_NAME}
+        </div>
+
         {groups.map((group) => (
           <nav key={group.heading} aria-label={group.heading}>
             <p className="sidebar-heading">{group.heading}</p>
@@ -65,6 +86,7 @@ function Sidebar({ isOpen, onClose }) {
             </ul>
           </nav>
         ))}
+
         {user && (
           <div className="sidebar-profile">
             <span className="avatar" aria-hidden="true">

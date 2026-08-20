@@ -1,0 +1,85 @@
+/* Recruiter Results & Statistics */
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+.chart-card {
+  min-width: 0;
+}
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: 13rem;
+  padding-top: var(--space-3);
+}
+
+.bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.bar-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 2.25rem;
+  height: 8rem;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  overflow: hidden;
+}
+
+.bar-fill {
+  width: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.bar-completion {
+  background: var(--color-primary-light);
+}
+
+.bar-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.week-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.week-legend i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  margin-left: var(--space-2);
+}
+
+.legend-vol {
+  background: var(--color-primary);
+}
+
+.legend-comp {
+  background: var(--color-primary-light);
+}
+
+@media (max-width: 1023px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}

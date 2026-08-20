@@ -1,324 +1,210 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Card from "../../components/common/Card";
+import { Play, RotateCcw, CheckCircle2, XCircle, Minus, Plus, Send } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
+import { Select } from "../../components/forms";
 import "./WhiteboardPage.css";
 
 const LANGUAGES = ["JavaScript", "Python", "Java", "C++"];
 
-const INITIAL_CODE = {
-  JavaScript: `function solve(numbers) {
-  // Write your solution here
+const INITIAL_LINES = [
+  "/**",
+  " * @param {number[]} nums",
+  " * @param {number} target",
+  " * @return {number[]}",
+  " */",
+  "const twoSum = function(nums, target) {",
+  "    const map = new Map();",
+  "    for (let i = 0; i < nums.length; i++) {",
+  "        const complement = target - nums[i];",
+  "        if (map.has(complement)) {",
+  "            return [map.get(complement), i];",
+  "        }",
+  "        map.set(nums[i], i);",
+  "    }",
+  "    return [];",
+  "};",
+];
 
-  return numbers;
-}`,
-  Python: `def solve(numbers):
-    # Write your solution here
+const INITIAL_CODE = INITIAL_LINES.join("\n");
 
-    return numbers`,
-  Java: `public class Solution {
-    public static int[] solve(int[] numbers) {
-        // Write your solution here
-
-        return numbers;
-    }
-}`,
-  "C++": `#include <vector>
-using namespace std;
-
-vector<int> solve(vector<int> numbers) {
-    // Write your solution here
-
-    return numbers;
-}`,
-};
+const TEST_CASES = [
+  { name: "Test Case 1: Standard Input", input: "nums = [2, 7, 11, 15], target = 9", passed: true },
+  { name: "Test Case 2: Out of Order", input: "nums = [3, 2, 4], target = 6", passed: true },
+  { name: "Test Case 3: Negative Numbers", input: "nums = [-1, -3, 4, 2], target = -4", passed: false },
+];
 
 function WhiteboardPage() {
   const navigate = useNavigate();
 
   const [language, setLanguage] = useState("JavaScript");
-  const [bdd, setBdd] = useState(
-    "Given a list of numbers\nWhen the solution is executed\nThen the expected result should be returned",
-  );
-  const [pseudocode, setPseudocode] = useState(
-    "1. Receive the input numbers\n2. Process the numbers\n3. Return the result",
-  );
-  const [code, setCode] = useState(INITIAL_CODE.JavaScript);
-  const [saved, setSaved] = useState(false);
+  const [code, setCode] = useState(INITIAL_CODE);
+  const [fontSize, setFontSize] = useState(14);
+  const [ran, setRan] = useState(false);
+  const [running, setRunning] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleLanguageChange = (event) => {
-    const selectedLanguage = event.target.value;
+  const lines = code.split("\n");
 
-    setLanguage(selectedLanguage);
-    setCode(INITIAL_CODE[selectedLanguage]);
-    setSaved(false);
+  const handleLanguageChange = (event) => setLanguage(event.target.value);
+
+  const handleReset = () => {
+    setCode(INITIAL_CODE);
+    setRan(false);
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setError("");
-  };
-
-  const handleClear = () => {
-    setCode("");
-    setSaved(false);
-  };
-
-  const handleFormat = () => {
-    setCode((previousCode) => previousCode.trim());
-    setSaved(false);
+  const handleRun = () => {
+    setRunning(true);
+    setTimeout(() => {
+      setRunning(false);
+      setRan(true);
+    }, 600);
   };
 
   const handleSubmit = () => {
-    if (!code.trim()) {
-      setError("Please write your solution before submitting.");
-      return;
-    }
-
-    setError("");
-    setShowConfirmation(true);
+    if (!code.trim()) return;
+    setSubmitted(true);
   };
 
-  const confirmSubmission = () => {
-    setSubmitted(true);
-    setShowConfirmation(false);
+  const toggleFont = (delta) => {
+    setFontSize((size) => Math.min(20, Math.max(11, size + delta)));
   };
 
   if (submitted) {
     return (
       <div className="whiteboard-page">
-        <Card padded>
-          <div className="whiteboard-complete">
-            <Badge variant="success">Submitted</Badge>
-
-            <h1>Solution submitted!</h1>
-
-            <p>
-              Your BDD, pseudocode, and code solution have been submitted
-              successfully.
-            </p>
-
-            <div className="submission-status">
-              <span>Submission status</span>
-              <strong>Submitted</strong>
-            </div>
-
-            <div className="whiteboard-complete-actions">
-              <Button onClick={() => navigate("/interviewee/assessments")}>
-                Back to Assessments
-              </Button>
-
-              <Button
-                variant="secondary"
-                onClick={() => navigate("/interviewee/dashboard")}
-              >
-                Dashboard
-              </Button>
-            </div>
+        <div className="whiteboard-complete">
+          <Badge variant="success">Submitted</Badge>
+          <h1>Solution submitted!</h1>
+          <p>Your code solution has been submitted successfully.</p>
+          <div className="whiteboard-complete-actions">
+            <Button onClick={() => navigate("/interviewee/assessments")}>
+              Back to Assessments
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/interviewee/dashboard")}>
+              Dashboard
+            </Button>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="whiteboard-page">
-      <div className="whiteboard-header">
-        <div>
-          <p className="whiteboard-label">Technical Challenge</p>
-          <h1>Whiteboard & Coding Workspace</h1>
-          <p>
-            Work through the problem using BDD, pseudocode, and code before
-            submitting your solution.
-          </p>
+      <div className="whiteboard-toolbar">
+        <div className="wb-problem">
+          <Badge variant="primary">Two Sum</Badge>
+          <span className="wb-problem-meta">Easy · Array, Hash Map</span>
         </div>
 
-        <Badge variant={saved ? "success" : "warning"}>
-          {saved ? "Draft saved" : "Unsaved changes"}
-        </Badge>
+        <div className="wb-controls">
+          <Select
+            aria-label="Language"
+            className="wb-language-select"
+            value={language}
+            onChange={handleLanguageChange}
+            options={LANGUAGES.map((lang) => ({ value: lang, label: lang }))}
+          />
+          <div className="wb-font-size">
+            <button type="button" aria-label="Decrease font size" onClick={() => toggleFont(-1)}>
+              <Minus size={14} />
+            </button>
+            <span>{fontSize}px</span>
+            <button type="button" aria-label="Increase font size" onClick={() => toggleFont(1)}>
+              <Plus size={14} />
+            </button>
+          </div>
+          <Button variant="secondary" onClick={handleReset}>
+            <RotateCcw size={16} />
+            Reset Code
+          </Button>
+          <Button onClick={handleRun}>
+            <Play size={16} />
+            Run Code
+          </Button>
+        </div>
+
+        <Button className="wb-submit-top" onClick={handleSubmit}>
+          <Send size={16} />
+          Submit Solution
+        </Button>
       </div>
 
       <div className="whiteboard-layout">
-        <aside className="whiteboard-sidebar">
-          <Card padded>
-            <h2>Problem statement</h2>
-
-            <p>
-              Given an array of numbers, create a solution that processes the
-              values and returns the expected result.
-            </p>
-
-            <h3>Examples</h3>
-
-            <div className="example-box">
-              <strong>Example 1</strong>
-              <span>Input: [1, 2, 3]</span>
-              <span>Output: [1, 2, 3]</span>
+        <section className="editor-pane">
+          <div className={`code-editor ${running ? "running" : ""}`}>
+            <div className="code-gutter">
+              {lines.map((_, index) => (
+                <div key={index}>{index + 1}</div>
+              ))}
             </div>
-
-            <div className="example-box">
-              <strong>Example 2</strong>
-              <span>Input: [5, 10, 15]</span>
-              <span>Output: [5, 10, 15]</span>
-            </div>
-
-            <h3>Constraints</h3>
-
-            <ul className="constraint-list">
-              <li>Input contains at least one number.</li>
-              <li>Values are valid numbers.</li>
-              <li>Your solution should be efficient.</li>
-            </ul>
-          </Card>
-        </aside>
-
-        <main className="whiteboard-main">
-          <Card padded>
-            <div className="editor-section">
-              <div className="editor-header">
-                <div>
-                  <h2>BDD</h2>
-                  <span>Describe the expected behaviour.</span>
-                </div>
+            <textarea
+              className="code-textarea"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              spellCheck="false"
+              style={{ fontSize: `${fontSize}px` }}
+              aria-label="Code editor"
+            />
+            <div className="code-overlay" aria-hidden="true">
+              <div style={{ fontSize: `${fontSize}px` }}>
+                {lines.map((line, index) => (
+                  <pre key={index}>{line || " "}</pre>
+                ))}
               </div>
-
-              <textarea
-                className="whiteboard-editor"
-                value={bdd}
-                onChange={(event) => {
-                  setBdd(event.target.value);
-                  setSaved(false);
-                }}
-                rows={6}
-              />
-            </div>
-
-            <div className="editor-section">
-              <div className="editor-header">
-                <div>
-                  <h2>Pseudocode</h2>
-                  <span>Plan your solution before coding.</span>
-                </div>
-              </div>
-
-              <textarea
-                className="whiteboard-editor"
-                value={pseudocode}
-                onChange={(event) => {
-                  setPseudocode(event.target.value);
-                  setSaved(false);
-                }}
-                rows={7}
-              />
-            </div>
-
-            <div className="editor-section">
-              <div className="editor-header">
-                <div>
-                  <h2>Code</h2>
-                  <span>Write and test your final solution.</span>
-                </div>
-
-                <select
-                  className="language-selector"
-                  value={language}
-                  onChange={handleLanguageChange}
-                >
-                  {LANGUAGES.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <textarea
-                className="code-editor"
-                value={code}
-                onChange={(event) => {
-                  setCode(event.target.value);
-                  setSaved(false);
-                }}
-                spellCheck="false"
-                rows={18}
-              />
-
-              <div className="editor-actions">
-                <Button variant="secondary" onClick={handleFormat}>
-                  Format
-                </Button>
-
-                <Button variant="secondary" onClick={handleClear}>
-                  Clear
-                </Button>
-
-                <Button onClick={handleSave}>Save Draft</Button>
-              </div>
-
-              {saved && (
-                <p className="save-message">
-                  Your draft has been saved successfully.
-                </p>
-              )}
-            </div>
-
-            {error && (
-              <div className="whiteboard-error">
-                <strong>Unable to submit</strong>
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="whiteboard-submit">
-              <div>
-                <strong>Ready to submit?</strong>
-                <span>
-                  Make sure your BDD, pseudocode, and code are complete.
-                </span>
-              </div>
-
-              <Button size="lg" onClick={handleSubmit}>
-                Submit Solution
-              </Button>
-            </div>
-          </Card>
-        </main>
-      </div>
-
-      {showConfirmation && (
-        <div className="whiteboard-modal-backdrop">
-          <div className="whiteboard-modal">
-            <Badge variant="warning">Confirm submission</Badge>
-
-            <h2>Submit your solution?</h2>
-
-            <p>
-              Once submitted, you will not be able to make changes to this
-              solution.
-            </p>
-
-            <div className="whiteboard-modal-actions">
-              <Button
-                variant="secondary"
-                onClick={() => setShowConfirmation(false)}
-              >
-                Continue Editing
-              </Button>
-
-              <Button onClick={confirmSubmission}>
-                Confirm Submission
-              </Button>
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="console-panel">
+            <div className="console-head">Console Output</div>
+            <div className="console-body">
+              {running ? (
+                <p className="console-line">Running tests...</p>
+              ) : ran ? (
+                <>
+                  <p className="console-line">&gt; Executed: twoSum([2, 7, 11, 15], 9)</p>
+                  <p className="console-line">&gt; Output: [0, 1]</p>
+                  <p className="console-line console-ok">&gt; Finished in 0.04s</p>
+                </>
+              ) : (
+                <p className="console-line console-dim">Press Run Code to execute your solution.</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <aside className="tests-pane">
+          <div className="tests-head">
+            <h2>Test Cases</h2>
+            <Badge variant={TEST_CASES.every((t) => t.passed) ? "success" : "danger"}>
+              {TEST_CASES.filter((t) => t.passed).length}/{TEST_CASES.length} passing
+            </Badge>
+          </div>
+
+          <div className="tests-list">
+            {TEST_CASES.map((test) => (
+              <div className={`test-card ${test.passed ? "passed" : "failed"}`} key={test.name}>
+                <div className="test-card-head">
+                  {test.passed ? (
+                    <CheckCircle2 size={16} className="test-pass-icon" />
+                  ) : (
+                    <XCircle size={16} className="test-fail-icon" />
+                  )}
+                  <strong>{test.name}</strong>
+                  <Badge variant={test.passed ? "success" : "danger"}>
+                    {test.passed ? "Passed" : "Failed"}
+                  </Badge>
+                </div>
+                <p className="test-input">{test.input}</p>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
 
 export default WhiteboardPage;
-

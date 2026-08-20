@@ -1,41 +1,48 @@
 /*
- * Smart Recruiter — Design System (FE-17)
+ * Smart Recruiter — Design System (Figma)
  * Colors, typography, spacing, radius, shadows, status colors.
- * All member contributions must use these tokens.
+ * Aligned to the Debugmasters Figma exports.
  */
 :root {
   /* Color palette */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1e40af;
-  --color-primary-light: #60a5fa;
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
+  --color-primary: #1972e8;
+  --color-primary-dark: #0c47a0;
+  --color-primary-light: #569bd6;
+  --color-primary-50: #e8efff;
+  --color-primary-100: #d6e4fb;
   --color-indigo: #4f46e5;
   --color-sky: #0ea5e9;
-  --color-secondary: #7c3aed;
-  --color-secondary-dark: #6d28d9;
+  --color-secondary: #1972e8;
+  --color-secondary-dark: #0c47a0;
   --color-bg: #ffffff;
-  --color-bg-subtle: #f8fafc;
-  --color-bg-muted: #f1f5f9;
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
+  --color-bg-subtle: #f7f9f9;
+  --color-bg-muted: #eef1f4;
+  --color-surface-raised: #ffffff;
+  --color-text: #212123;
+  --color-text-muted: #5e6368;
   --color-text-inverse: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  --color-border: #e0e0e0;
+  --color-border-strong: #c4c9cf;
 
   /* Status colors */
-  --color-success: #16a34a;
-  --color-success-bg: #f0fdf4;
-  --color-warning: #d97706;
-  --color-warning-bg: #fffbeb;
-  --color-danger: #dc2626;
-  --color-danger-bg: #fef2f2;
-  --color-info: #0284c7;
-  --color-info-bg: #f0f9ff;
+  --color-success: #1e8e3d;
+  --color-success-bg: #e5f4ea;
+  --color-warning: #af6000;
+  --color-warning-bg: #fdf0e0;
+  --color-danger: #d83026;
+  --color-danger-bg: #fbe7e6;
+  --color-info: #1972e8;
+  --color-info-bg: #e8efff;
+
+  /* Whiteboard / code editor palette (Monaco dark) */
+  --editor-bg: #1e1e1e;
+  --editor-surface: #252526;
+  --editor-border: #333333;
+  --editor-gutter: #212121;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #2563eb 55%, #3b82f6 100%);
-  --gradient-hero: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #0ea5e9 100%);
+  --gradient-primary: linear-gradient(135deg, #0c47a0 0%, #1972e8 60%, #569bd6 100%);
+  --gradient-hero: linear-gradient(135deg, #0c47a0 0%, #1972e8 60%, #569bd6 100%);
 
   /* Typography */
   --font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
@@ -69,19 +76,19 @@
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.07),
-    0 2px 4px -2px rgb(15 23 42 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.1),
-    0 4px 6px -4px rgb(15 23 42 / 0.05);
-  --shadow-xl: 0 20px 25px -5px rgb(15 23 42 / 0.12),
-    0 8px 10px -6px rgb(15 23 42 / 0.08);
-  --shadow-focus: 0 0 0 4px rgb(37 99 235 / 0.18);
+  --shadow-sm: 0 1px 2px rgb(33 33 35 / 0.06);
+  --shadow-md: 0 4px 6px -1px rgb(33 33 35 / 0.08),
+    0 2px 4px -2px rgb(33 33 35 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(33 33 35 / 0.12),
+    0 4px 6px -4px rgb(33 33 35 / 0.06);
+  --shadow-xl: 0 20px 25px -5px rgb(33 33 35 / 0.14),
+    0 8px 10px -6px rgb(33 33 35 / 0.1);
+  --shadow-focus: 0 0 0 4px rgb(25 114 232 / 0.2);
 
   /* Layout */
-  --sidebar-width: 16.5rem;
+  --sidebar-width: 15.5rem;
   --header-height: 4rem;
-  --content-max-width: 80rem;
+  --content-max-width: 90rem;
 
   --transition-fast: 150ms ease;
 }
@@ -102,6 +109,7 @@ body {
   font-family: var(--font-family);
   line-height: 1.5;
   font-weight: 400;
+  font-size: var(--font-size-base);
   color: var(--color-text);
   background: var(--color-bg-subtle);
   -webkit-font-smoothing: antialiased;
@@ -142,13 +150,13 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Focus visibility (FE-23) */
+/* Focus visibility */
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-/* Skip link (FE-23) */
+/* Skip link */
 .skip-link {
   position: absolute;
   top: -40px;
@@ -168,7 +176,7 @@ button {
   font-family: inherit;
 }
 
-/* Responsive breakpoints (FE-17) */
+/* Responsive breakpoints */
 .container {
   width: 100%;
   margin: 0 auto;
@@ -199,7 +207,7 @@ button {
   background: var(--color-text-muted);
 }
 
-/* Reduce motion (FE-23) */
+/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

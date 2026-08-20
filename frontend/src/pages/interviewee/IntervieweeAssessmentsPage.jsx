@@ -112,9 +112,12 @@ function IntervieweeAssessmentsPage() {
   return (
     <div className="interviewee-assessments">
       <div className="assessments-header">
-        <div>
-          <h1>Invitations & Notifications</h1>
-          <p>Manage your assessment invitations and stay updated.</p>
+        <div className="page-header">
+          <p className="breadcrumb">Smart Recruiter / My Assessments</p>
+          <h1>My Assessments</h1>
+          <p className="page-header-desc">
+            Manage your assessment invitations and stay updated.
+          </p>
         </div>
 
         <div className="notification-wrapper">

@@ -1,20 +1,34 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Bell, Menu, Search } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { ROLES, ROUTES, APP_NAME } from "../../utils/constants";
+import { ROLES, ROUTES } from "../../utils/constants";
 import UserMenu from "./UserMenu";
 
-function Navbar({ onToggleSidebar }) {
+function Topbar({ onToggleSidebar }) {
   const { user } = useAuth();
+  const [query, setQuery] = useState("");
 
   const home =
     user?.role === ROLES.RECRUITER
       ? ROUTES.RECRUITER.DASHBOARD
       : ROUTES.INTERVIEWEE.DASHBOARD;
 
+  const isRecruiter = user?.role === ROLES.RECRUITER;
+
+  const searchPlaceholder = isRecruiter
+    ? "Search candidates, questions..."
+    : "Search assessments, tutorials...";
+
+  const searchPath = isRecruiter
+    ? ROUTES.RECRUITER.RESULTS
+    : ROUTES.INTERVIEWEE.ASSESSMENTS;
+
+  const roleLabel = isRecruiter ? "System Admin" : "Developer Role";
+
   return (
-    <header className="navbar">
-      <div className="navbar-actions">
+    <header className="topbar">
+      <div className="topbar-left">
         <button
           type="button"
           className="navbar-toggle"
@@ -23,16 +37,54 @@ function Navbar({ onToggleSidebar }) {
         >
           <Menu size={22} aria-hidden="true" />
         </button>
-        <Link to={home} className="navbar-brand">
-          <span className="navbar-logo" aria-hidden="true">
-            SR
-          </span>
-          {APP_NAME}
+
+        <Link to={home} className="topbar-search">
+          <Search size={18} aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label="Search"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && query.trim()) {
+                window.location.href = searchPath;
+              }
+            }}
+          />
         </Link>
       </div>
-      <div className="navbar-actions">
+
+      <div className="topbar-actions">
         {user ? (
-          <UserMenu />
+          <>
+            <Link
+              to={
+                isRecruiter
+                  ? ROUTES.RECRUITER.RESULTS
+                  : ROUTES.INTERVIEWEE.NOTIFICATIONS
+              }
+              className="topbar-icon-btn"
+              aria-label="Notifications"
+            >
+              <Bell size={20} />
+            </Link>
+            <UserMenu />
+            <div className="topbar-user">
+              <span className="avatar" aria-hidden="true">
+                {user.name
+                  ?.split(" ")
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase() || "U"}
+              </span>
+              <div className="topbar-user-meta">
+                <strong>{user.name}</strong>
+                <span>{roleLabel}</span>
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm">
@@ -48,4 +100,4 @@ function Navbar({ onToggleSidebar }) {
   );
 }
 
-export default Navbar;
+export default Topbar;

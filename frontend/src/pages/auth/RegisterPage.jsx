@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Compass, Target } from "lucide-react";
 import { Button, Alert } from "../../components/common";
-import { Input, Radio } from "../../components/forms";
+import { Input, Radio, Checkbox } from "../../components/forms";
 import { useAuth } from "../../hooks/useAuth";
 import {
   validateEmail,
@@ -24,6 +24,7 @@ function RegisterPage() {
     password: "",
     confirmPassword: "",
     role: ROLES.INTERVIEWEE,
+    agree: false,
   });
   const [errors, setErrors] = useState({});
 
@@ -51,6 +52,9 @@ function RegisterPage() {
     } else if (!validateMatch(values.password, values.confirmPassword)) {
       nextErrors.confirmPassword = "Passwords do not match.";
     }
+    if (!values.agree) {
+      nextErrors.agree = "You must agree to the Terms of Service.";
+    }
     return nextErrors;
   }
 
@@ -76,7 +80,6 @@ function RegisterPage() {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <h2 className="auth-form-title">Create an account</h2>
       {error && (
         <Alert variant="danger" role="alert" style={{ marginBottom: "var(--space-4)" }}>
           {error}
@@ -84,7 +87,7 @@ function RegisterPage() {
       )}
 
       <Input
-        label="Full name"
+        label="Full Name"
         name="name"
         value={values.name}
         onChange={handleChange}
@@ -95,13 +98,13 @@ function RegisterPage() {
       />
 
       <Input
-        label="Email"
+        label="Email Address"
         name="email"
         type="email"
         value={values.email}
         onChange={handleChange}
         error={errors.email}
-        placeholder="you@example.com"
+        placeholder="jane@company.com"
         autoComplete="email"
         required
       />
@@ -116,25 +119,25 @@ function RegisterPage() {
         error={errors.password}
         placeholder="••••••••"
         autoComplete="new-password"
-        hint={`At least ${MIN_PASSWORD_LENGTH} characters with a letter and a number.`}
+        hint="Minimum 8 characters"
         required
       />
 
       <Input
-        label="Confirm password"
+        label="Confirm Password"
         name="confirmPassword"
         type="password"
         showToggle
         value={values.confirmPassword}
         onChange={handleChange}
         error={errors.confirmPassword}
-        placeholder="••••••••"
+        placeholder="Repeat password"
         autoComplete="new-password"
         required
       />
 
       <fieldset className="auth-role-fieldset">
-        <legend className="form-field-label">I am a</legend>
+        <legend className="form-field-label">I want to join as a</legend>
         <Radio
           name="role"
           value={values.role}
@@ -146,20 +149,30 @@ function RegisterPage() {
               label: "Recruiter",
               value: ROLES.RECRUITER,
               icon: <Compass size={22} />,
-              hint: "Manage assessments",
             },
             {
               label: "Interviewee",
               value: ROLES.INTERVIEWEE,
               icon: <Target size={22} />,
-              hint: "Take assessments",
             },
           ]}
         />
       </fieldset>
 
+      <div className={`auth-terms ${errors.agree ? "auth-terms-error" : ""}`}>
+        <Checkbox
+          name="agree"
+          label="I agree to the Terms of Service and Privacy Policy"
+          checked={values.agree}
+          onChange={(event) =>
+            setValues((current) => ({ ...current, agree: event.target.checked }))
+          }
+        />
+        {errors.agree && <p className="form-field-error">{errors.agree}</p>}
+      </div>
+
       <Button type="submit" block loading={isLoading}>
-        {isLoading ? "Creating account…" : "Create account"}
+        {isLoading ? "Creating account…" : "Create Account"}
       </Button>
     </form>
   );

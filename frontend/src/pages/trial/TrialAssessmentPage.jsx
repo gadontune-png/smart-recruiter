@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Lightbulb, Info, Award } from "lucide-react";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
@@ -9,9 +10,14 @@ const TRIAL_QUESTIONS = [
   {
     id: 1,
     type: "mcq",
-    question: "Which language is primarily used to structure web pages?",
-    options: ["JavaScript", "HTML", "Python", "SQL"],
-    correctAnswer: "HTML",
+    question:
+      "Which of the following describes the correct behavior of the React 'useEffect' cleanup function?",
+    options: [
+      "It runs exactly once when the component mounts onto the virtual DOM root.",
+      "It executes before the component unmounts, and before re-running the effect on dependency change.",
+      "It is used to force re-render asynchronous states when error boundaries trigger.",
+      "It runs concurrently on every animation frame calculation tick.",
+    ],
   },
   {
     id: 2,
@@ -37,9 +43,14 @@ function TrialAssessmentPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [hint, setHint] = useState(false);
 
   const question = TRIAL_QUESTIONS[currentQuestion];
   const currentAnswer = answers[question.id] || "";
+
+  const progressPercent = Math.round(
+    ((currentQuestion + 1) / TRIAL_QUESTIONS.length) * 100
+  );
 
   const updateAnswer = (value) => {
     setAnswers((previousAnswers) => ({
@@ -60,6 +71,12 @@ function TrialAssessmentPage() {
     }
   };
 
+  const handleSkip = () => {
+    if (currentQuestion < TRIAL_QUESTIONS.length - 1) {
+      setCurrentQuestion((previous) => previous + 1);
+    }
+  };
+
   const handleSubmit = () => {
     setSubmitted(true);
   };
@@ -67,12 +84,22 @@ function TrialAssessmentPage() {
   if (!started) {
     return (
       <div className="trial-page">
-        <Card padded>
-          <div className="trial-landing">
-            <Badge variant="info">Trial Assessment</Badge>
+        <div className="trial-landing">
+          <div className="practice-mode-banner">
+            <Info size={18} />
+            Practice Mode Enabled: This is a trial assessment simulation. Your
+            score here does not affect actual job recruitment.
+          </div>
 
+          <Card padded className="trial-landing-card">
+            <div className="trial-landing-top">
+              <Badge variant="info">
+                <Award size={14} />
+                Trial Assessment
+              </Badge>
+              <span>10 questions · ~30 mins</span>
+            </div>
             <h1>Get familiar with assessments</h1>
-
             <p>
               This short trial assessment helps you understand how the
               assessment platform works before taking a real assessment.
@@ -80,7 +107,6 @@ function TrialAssessmentPage() {
 
             <div className="trial-instructions">
               <h2>What to expect</h2>
-
               <ul>
                 <li>Multiple-choice questions</li>
                 <li>Free-text questions</li>
@@ -94,8 +120,8 @@ function TrialAssessmentPage() {
             <Button size="lg" onClick={() => setStarted(true)}>
               Start Trial
             </Button>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -103,34 +129,32 @@ function TrialAssessmentPage() {
   if (submitted) {
     return (
       <div className="trial-page">
-        <Card padded>
-          <div className="trial-complete">
-            <Badge variant="success">Completed</Badge>
+        <Card padded className="trial-complete">
+          <Badge variant="success">Completed</Badge>
 
-            <h1>Trial completed!</h1>
+          <h1>Trial completed!</h1>
 
-            <p>
-              Great job! You have completed the trial assessment and are now
-              familiar with the assessment experience.
-            </p>
+          <p>
+            Great job! You have completed the trial assessment and are now
+            familiar with the assessment experience.
+          </p>
 
-            <div className="trial-result">
-              <strong>{Object.keys(answers).length}</strong>
-              <span>questions answered</span>
-            </div>
+          <div className="trial-result">
+            <strong>{Object.keys(answers).length}</strong>
+            <span>questions answered</span>
+          </div>
 
-            <div className="trial-complete-actions">
-              <Button onClick={() => navigate("/interviewee/assessments")}>
-                Back to Assessments
-              </Button>
+          <div className="trial-complete-actions">
+            <Button onClick={() => navigate("/interviewee/practice")}>
+              Back to Practice
+            </Button>
 
-              <Button
-                variant="secondary"
-                onClick={() => navigate("/interviewee/dashboard")}
-              >
-                Dashboard
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              onClick={() => navigate("/interviewee/dashboard")}
+            >
+              Dashboard
+            </Button>
           </div>
         </Card>
       </div>
@@ -139,37 +163,49 @@ function TrialAssessmentPage() {
 
   return (
     <div className="trial-page">
-      <div className="trial-header">
-        <div>
-          <p className="trial-label">Trial Assessment</p>
-          <h1>Practice Assessment</h1>
-          <p>Question {currentQuestion + 1} of {TRIAL_QUESTIONS.length}</p>
-        </div>
-
-        <Badge variant="warning">Trial Mode</Badge>
+      <div className="practice-mode-banner">
+        <Info size={18} />
+        Practice Mode Enabled: This is a trial assessment simulation. Your score
+        here does not affect actual job recruitment.
       </div>
 
-      <div className="trial-progress">
-        <div
-          className="trial-progress-bar"
-          style={{
-            width: `${((currentQuestion + 1) / TRIAL_QUESTIONS.length) * 100}%`,
-          }}
-        />
+      <div className="trial-progress-panel">
+        <div className="progress-panel-top">
+          <div>
+            <span className="progress-label">Question Progress</span>
+            <strong>
+              {currentQuestion + 1} of {TRIAL_QUESTIONS.length}
+            </strong>
+          </div>
+          <div className="progress-timer">
+            <span className="progress-label">Time Remaining</span>
+            <strong>12:45</strong>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setHint((value) => !value)}>
+            <Lightbulb size={16} />
+            Show Hint
+          </Button>
+        </div>
+        <div className="trial-progress">
+          <div
+            className="trial-progress-bar"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <span className="progress-percent">{progressPercent}% Complete</span>
+        {hint && <p className="trial-hint">Hint: Think carefully about when cleanup callbacks run in React's effect lifecycle.</p>}
       </div>
 
-      <Card padded>
-        <div className="trial-question-header">
-          <Badge variant="info">
-            {question.type === "mcq"
-              ? "Multiple Choice"
-              : question.type === "text"
-                ? "Free Text"
-                : "Coding"}
-          </Badge>
-        </div>
+      <Card padded className="trial-question-card">
+        <Badge variant="info" className="question-type-badge">
+          {question.type === "mcq"
+            ? "Multiple Choice Question"
+            : question.type === "text"
+              ? "Free Text Question"
+              : "Coding Question"}
+        </Badge>
 
-        <h2>{question.question}</h2>
+        <h2 className="trial-question-text">{question.question}</h2>
 
         {question.type === "mcq" && (
           <div className="trial-options">
@@ -187,7 +223,9 @@ function TrialAssessmentPage() {
                   checked={currentAnswer === option}
                   onChange={() => updateAnswer(option)}
                 />
-
+                <span className="option-marker" aria-hidden="true">
+                  {String.fromCharCode(65 + question.options.indexOf(option))}
+                </span>
                 <span>{option}</span>
               </label>
             ))}
@@ -223,9 +261,13 @@ function TrialAssessmentPage() {
             Previous
           </Button>
 
+          <Button variant="ghost" onClick={handleSkip}>
+            Skip Question
+          </Button>
+
           {currentQuestion === TRIAL_QUESTIONS.length - 1 ? (
             <Button onClick={handleSubmit} disabled={!currentAnswer.trim()}>
-              Submit Trial
+              Submit Practice
             </Button>
           ) : (
             <Button onClick={handleNext} disabled={!currentAnswer.trim()}>
@@ -234,25 +276,6 @@ function TrialAssessmentPage() {
           )}
         </div>
       </Card>
-
-      <div className="trial-navigation">
-        <h3>Questions</h3>
-
-        <div className="trial-question-numbers">
-          {TRIAL_QUESTIONS.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`trial-question-number ${
-                index === currentQuestion ? "active" : ""
-              } ${answers[item.id] ? "answered" : ""}`}
-              onClick={() => setCurrentQuestion(index)}
-            >
-              {index + 1}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

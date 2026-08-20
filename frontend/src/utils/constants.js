@@ -17,16 +17,24 @@ export const ROUTES = Object.freeze({
   RECRUITER: {
     DASHBOARD: "/recruiter/dashboard",
     ASSESSMENTS: "/recruiter/assessments",
-    CANDIDATES: "/recruiter/candidates",
+    QUESTIONS: "/recruiter/questions",
+    INVITATIONS: "/recruiter/invitations",
+    RESULTS: "/recruiter/results",
+    GRADING: "/recruiter/grading",
+    SETTINGS: "/recruiter/settings",
     ADD_ASSESSMENT: "/recruiter/assessments/new",
   },
   INTERVIEWEE: {
     DASHBOARD: "/interviewee/dashboard",
     ASSESSMENTS: "/interviewee/assessments",
+    PRACTICE: "/interviewee/practice",
     RESULTS: "/interviewee/results",
     INVITATIONS: "/interviewee/invitations",
     NOTIFICATIONS: "/interviewee/notifications",
+    SETTINGS: "/interviewee/settings",
   },
+  TRIAL: "/trial",
+  WHITEBOARD: "/whiteboard",
   ASSESSMENT: "/assessment/:id",
 });
 

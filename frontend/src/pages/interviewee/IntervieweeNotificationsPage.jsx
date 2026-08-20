@@ -81,10 +81,12 @@ function IntervieweeNotificationsPage() {
   return (
     <div className="interviewee-notifications">
       <div className="notifications-header">
-        <div>
-          <p className="notifications-label">Interviewee Portal</p>
+        <div className="page-header">
+          <p className="breadcrumb">Smart Recruiter / Notifications</p>
           <h1>Notifications</h1>
-          <p>Stay informed about invitations, reminders, grades, and mentor feedback.</p>
+          <p className="page-header-desc">
+            Stay informed about invitations, reminders, grades, and mentor feedback.
+          </p>
         </div>
 
         <div className="header-actions">

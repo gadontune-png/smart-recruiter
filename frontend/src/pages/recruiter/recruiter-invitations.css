@@ -1,0 +1,120 @@
+/* Recruiter Invitations */
+
+.invite-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+  margin-bottom: var(--space-6);
+}
+
+.added-emails {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.added-emails li {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-success-bg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+}
+
+.csv-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-10) var(--space-6);
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-subtle);
+  text-align: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.csv-dropzone:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-50);
+}
+
+.csv-dropzone strong {
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+}
+
+.csv-dropzone span {
+  font-size: var(--font-size-sm);
+}
+
+.csv-dropzone input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.log-filters {
+  margin-bottom: var(--space-4);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.btn-danger-text {
+  color: var(--color-danger) !important;
+}
+
+.btn-danger-text:hover {
+  background: var(--color-danger-bg) !important;
+}
+
+.email-tag {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.email-box {
+  max-width: 46rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  background: var(--color-bg-subtle);
+}
+
+.email-subject {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+
+.email-greeting {
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.email-body {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.email-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 1023px) {
+  .invite-columns {
+    grid-template-columns: 1fr;
+  }
+}

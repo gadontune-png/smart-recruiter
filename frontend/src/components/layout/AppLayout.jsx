@@ -11,20 +11,19 @@ function AppLayout() {
 
   return (
     <div className="app-shell">
-      <Navbar
-        onToggleSidebar={() => dispatch(toggleSidebar())}
-      />
-      <div className="layout-body">
+      <div className="app-shell-inner">
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={() =>
-            isSidebarOpen &&
-            dispatch(toggleSidebar())
+            isSidebarOpen && dispatch(toggleSidebar())
           }
         />
-        <main className="main-content" style={{ marginTop: 0 }}>
-          <Outlet />
-        </main>
+        <div className="app-main">
+          <Navbar onToggleSidebar={() => dispatch(toggleSidebar())} />
+          <main className="main-content">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

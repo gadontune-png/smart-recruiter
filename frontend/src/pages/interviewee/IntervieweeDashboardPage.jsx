@@ -1,186 +1,139 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import Card from "../../components/common/Card";
+import {
+  Lock,
+  ArrowRight,
+  CheckCircle2,
+  Trophy,
+  CalendarClock,
+  Gauge,
+} from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { SkeletonCard } from "../../components/common/Skeleton";
-import ErrorState from "../../components/common/ErrorState";
-import EmptyState from "../../components/common/EmptyState";
+import { ROUTES } from "../../utils/constants";
 import "./interviewee-dashboard.css";
+
+const STATS = [
+  { label: "Assessments Completed", value: "3", delta: "Ready for review", icon: CheckCircle2 },
+  { label: "Upcoming", value: "2", delta: "Next testing window: tomorrow", icon: CalendarClock },
+  { label: "Average Score", value: "78%", delta: "Stable performance", icon: Gauge },
+  { label: "Global Rank", value: "Top 15%", delta: "Top 10% milestone near", icon: Trophy },
+];
+
+const UPCOMING = [
+  {
+    title: "Acme Corp Front-End Evaluation",
+    meta: "Starts: Oct 24, 10:00 AM  ·  Duration: 90 mins  ·  Focus: React, JS Essentials",
+    locked: false,
+  },
+  {
+    title: "DevOps & Cloud Orchestration",
+    meta: "Starts: Oct 26, 2:00 PM  ·  Duration: 120 mins  ·  Focus: Docker, K8s Architecture",
+    locked: true,
+  },
+];
+
+const ACTIVITIES = [
+  { text: "Completed Practice Test: React Performance Hookups", time: "2 hours ago", tone: "success" },
+  { text: "Accepted Interview Invitation from Stripe", time: "1 day ago", tone: "info" },
+  { text: "Profile evaluated by Assessment Engine", time: "3 days ago", tone: "neutral" },
+];
 
 function IntervieweeDashboardPage() {
   const navigate = useNavigate();
 
-  const loading = false;
-  const [error, setError] = useState(false);
-  const hasAssessments = true;
-
-  if (loading) {
   return (
     <div className="interviewee-dashboard">
-      <h1>Loading your dashboard...</h1>
-      <SkeletonCard lines={3} />
-      <SkeletonCard lines={3} />
-    </div>
-  );
-}
-
-if (error) {
-  return (
-    <div className="interviewee-dashboard">
-      <ErrorState
-        title="Unable to load dashboard"
-        message="We couldn't load your assessment information."
-        onRetry={() => setError(false)}
-      />
-    </div>
-  );
-}
-
-if (!hasAssessments) {
-  return (
-    <div className="interviewee-dashboard">
-      <h1>Your Assessments</h1>
-
-      <EmptyState
-        title="No assessments yet"
-        description="You don't have any assessments assigned to you yet."
-      />
-    </div>
-  );
-}
-  return (
-    <div className="interviewee-dashboard">
-     <div className="dashboard-header">
-   <div>
-      <h1>Welcome back!</h1>
-      <p>Here's an overview of your assessments and progress.</p>
-   </div>
-
-  <div className="profile-summary">
-    <div className="profile-avatar">JD</div>
-
-    <div>
-      <strong>John Doe</strong>
-      <p>Interviewee</p>
-    </div>
-  </div>
-</div>
-
-      <div className="dashboard-stats">
-        <Card padded>
-          <span>Assigned Assessments</span>
-          <h2>5</h2>
-        </Card>
-
-        <Card padded>
-          <span>Pending Invitations</span>
-          <h2>2</h2>
-        </Card>
-
-        <Card padded>
-          <span>Completed Assessments</span>
-          <h2>3</h2>
-        </Card>
+      <div className="page-header">
+        <p className="breadcrumb">Smart Recruiter / Dashboard</p>
       </div>
 
-      <div className="dashboard-section">
-        <h2>Upcoming Assessments</h2>
-
-        <Card padded>
-          <div className="assessment-card">
-            <div>
-              <h3>Frontend Developer Assessment</h3>
-              <p>August 21, 2026 · 10:00 AM</p>
-              <p>Duration: 60 minutes</p>
-            </div>
-
-            <div>
-              <Badge variant="info">Upcoming</Badge>
-             <Button
-  size="sm"
-  onClick={() => navigate("/assessment/1")}
->
-  View Assessment
-</Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Recent Results</h2>
-
-        <Card padded>
-          <div className="result-card">
-            <div>
-              <h3>JavaScript Assessment</h3>
-              <p>Completed August 17, 2026</p>
-            </div>
-
-            <div>
-              <strong>85%</strong>
-              <Badge variant="success">Grade A</Badge>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Quick Actions</h2>
-
-        <div className="quick-actions">
-          <Button onClick={() => navigate("/interviewee/assessments")}>
-            View Assessments
-          </Button>
-
-          <Button
-            onClick={() => navigate("/interviewee/invitations")}
-            variant="secondary"
-          >
-            View Invitations
-          </Button>
-
-          <Button
-            onClick={() => navigate("/interviewee/notifications")}
-            variant="secondary"
-          >
-            View Notifications
-          </Button>
-
-          <Button
-            onClick={() => navigate("/interviewee/results")}
-            variant="secondary"
-          >
-            View Results
-          </Button>
+      <section className="welcome-banner">
+        <div>
+          <h1>Welcome back, Alex Rivera!</h1>
+          <p>
+            &quot;The beautiful thing about learning is nobody can take it away
+            from you.&quot;
+          </p>
+          <span>Practice daily to sharpen your coding skills and climb the leaderboard.</span>
         </div>
+        <span className="welcome-badge">Developer Role</span>
+      </section>
+
+      <div className="stat-grid">
+        {STATS.map((stat) => (
+          <div className="stat-card" key={stat.label}>
+            <span className="stat-card-icon stat-icon-blue">
+              <stat.icon size={20} />
+            </span>
+            <div>
+              <div className="stat-card-label">{stat.label}</div>
+              <div className="stat-card-value">{stat.value}</div>
+              <div className="stat-card-delta">{stat.delta}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="dashboard-section">
-  <h2>Assessment Status</h2>
+      <div className="dashboard-split">
+        <section>
+          <div className="panel-heading">
+            <h2>Upcoming Assessments</h2>
+          </div>
+          <div className="upcoming-list">
+            {UPCOMING.map((assessment) => (
+              <div className="panel upcoming-card" key={assessment.title}>
+                <div className="upcoming-card-top">
+                  <h3>{assessment.title}</h3>
+                  {assessment.locked && <Badge variant="neutral"><Lock size={12} /> Locked</Badge>}
+                </div>
+                <p className="upcoming-meta">{assessment.meta}</p>
+                {assessment.locked ? (
+                  <Button variant="secondary" disabled>
+                    <Lock size={16} />
+                    Locked
+                  </Button>
+                ) : (
+                  <Button onClick={() => navigate(ROUTES.ASSESSMENT.replace(":id", "5"))}>
+                    Start <ArrowRight size={16} />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
 
-  <div className="status-cards">
-    <Card padded>
-      <Badge variant="warning">Pending</Badge>
-      <h3>2 Assessments</h3>
-      <p>Waiting for you to start.</p>
-    </Card>
+        <section>
+          <div className="panel-heading">
+            <h2>Recent Activity</h2>
+          </div>
+          <div className="panel activity-panel">
+            <ul className="activity-list">
+              {ACTIVITIES.map((activity) => (
+                <li className="activity-item" key={activity.text}>
+                  <span className={`activity-dot activity-${activity.tone}`} />
+                  <div>
+                    <p>{activity.text}</p>
+                    <span>{activity.time}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-    <Card padded>
-      <Badge variant="info">In Progress</Badge>
-      <h3>1 Assessment</h3>
-      <p>Currently being completed.</p>
-    </Card>
-
-    <Card padded>
-      <Badge variant="success">Completed</Badge>
-      <h3>3 Assessments</h3>
-      <p>Successfully submitted.</p>
-    </Card>
-  </div>
-</div>
-
+          <div className="panel-heading">
+            <h2>Practice</h2>
+          </div>
+          <div className="panel practice-card">
+            <p>
+              Trial assessments simulate the real interview environment so you can
+              sharpen your skills with zero risk.
+            </p>
+            <Button variant="outline" onClick={() => navigate(ROUTES.TRIAL)}>
+              Start a Trial Assessment
+            </Button>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
