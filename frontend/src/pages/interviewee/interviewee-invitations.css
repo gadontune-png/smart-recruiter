@@ -1,0 +1,154 @@
+.interviewee-invitations {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8);
+}
+
+.invitations-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.invitations-header h1 {
+  margin-bottom: var(--space-2);
+}
+
+.invitations-header p:last-child {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.invitations-label {
+  margin-bottom: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.invitation-confirmation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-lg);
+  background: var(--color-success-bg);
+}
+
+.invitation-confirmation span {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.invitations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.invitation-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.invitation-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.invitation-card-header h2 {
+  margin: 0;
+}
+
+.invitation-description {
+  max-width: 850px;
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.invitation-details {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-lg);
+}
+
+.invitation-details div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.invitation-details span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.invitation-details strong {
+  font-size: var(--font-size-sm);
+}
+
+.invitation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .invitation-details {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .interviewee-invitations {
+    padding: var(--space-4);
+  }
+
+  .invitations-header {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .invitations-header > .btn {
+    width: 100%;
+  }
+
+  .invitation-card-header {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .invitation-details {
+    grid-template-columns: 1fr;
+  }
+
+  .invitation-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .invitation-actions .btn {
+    width: 100%;
+  }
+
+  .invitation-confirmation {
+    align-items: flex-start;
+  }
+}

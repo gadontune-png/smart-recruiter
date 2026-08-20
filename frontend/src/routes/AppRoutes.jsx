@@ -15,8 +15,14 @@ import RecruiterCandidatesPage from "../pages/recruiter/RecruiterCandidatesPage"
 import IntervieweeDashboardPage from "../pages/interviewee/IntervieweeDashboardPage";
 import IntervieweeAssessmentsPage from "../pages/interviewee/IntervieweeAssessmentsPage";
 import IntervieweeResultsPage from "../pages/interviewee/IntervieweeResultsPage";
+import IntervieweeInvitationsPage from "../pages/interviewee/IntervieweeInvitationsPage";
+import IntervieweeNotificationsPage from "../pages/interviewee/IntervieweeNotificationsPage";
 
 import AssessmentPage from "../pages/assessment/AssessmentPage";
+
+import TrialAssessmentPage from "../pages/trial/TrialAssessmentPage";
+
+import WhiteboardPage from "../pages/whiteboard/WhiteboardPage";
 
 export const router = createBrowserRouter([
   {
@@ -81,6 +87,23 @@ export const router = createBrowserRouter([
               {
                 path: ROUTES.INTERVIEWEE.RESULTS,
                 element: <IntervieweeResultsPage />,
+              },
+              {
+                path: "/interviewee/invitations",
+                element: <IntervieweeInvitationsPage />,
+              },
+              {
+                path: "/interviewee/notifications",
+                element: <IntervieweeNotificationsPage />,
+              },
+              {
+                path: "/trial",
+                element: <TrialAssessmentPage />,
+              },
+
+              {
+                path: "/whiteboard",
+                element: <WhiteboardPage />,
               },
             ],
           },

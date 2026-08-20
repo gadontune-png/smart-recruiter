@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, Users, Home, TrendingUp } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, Home, TrendingUp, Bell } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES, ROUTES } from "../../utils/constants";
 
@@ -20,6 +20,7 @@ const NAV_GROUPS = Object.freeze({
       items: [
         { label: "Dashboard", to: ROUTES.INTERVIEWEE.DASHBOARD, icon: Home },
         { label: "Assessments", to: ROUTES.INTERVIEWEE.ASSESSMENTS, icon: ClipboardList },
+        { label: "Notifications", to: ROUTES.INTERVIEWEE.NOTIFICATIONS, icon: Bell },
         { label: "Results", to: ROUTES.INTERVIEWEE.RESULTS, icon: TrendingUp },
       ],
     },
