@@ -20,6 +20,8 @@ import AssessmentPage from "../pages/assessment/AssessmentPage";
 
 import TrialAssessmentPage from "../pages/trial/TrialAssessmentPage";
 
+import WhiteboardPage from "../pages/whiteboard/WhiteboardPage";
+
 export const router = createBrowserRouter([
   {
     element: <GuestOnly />,
@@ -88,6 +90,11 @@ export const router = createBrowserRouter([
               {
                  path: "/trial",
                 element: <TrialAssessmentPage />,
+            },
+
+            {
+                path: "/whiteboard",
+                element: <WhiteboardPage />,
             },
 
             ],
