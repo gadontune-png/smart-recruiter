@@ -1,0 +1,13 @@
+# Backend dependencies (Python / FastAPI / PostgreSQL)
+# TODO: adjust versions when the backend is actually wired up
+
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+pydantic
+pydantic-settings
+python-dotenv
+alembic
+httpx
+pytest
