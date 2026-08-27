@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.core.database import Base, engine
 from app.api.assessments.routes import router as assessments_router
+from app.api.questions.routes import router as questions_router
 from app.api.invitations.routes import router as invitations_router
 from app.api.notifications.routes import router as notifications_router
 from app.api.results.routes import router as results_router
@@ -21,6 +22,7 @@ app = FastAPI(title="Smart Recruiter API")
 Base.metadata.create_all(bind=engine)
 
 app.include_router(assessments_router)
+app.include_router(questions_router)
 app.include_router(invitations_router)
 app.include_router(notifications_router)
 app.include_router(results_router)
