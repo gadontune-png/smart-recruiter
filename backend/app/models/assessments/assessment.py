@@ -2,6 +2,7 @@ import uuid
 import enum
 from datetime import datetime
 
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, Text, Integer, DateTime, Enum
 
 from app.core.database import Base
