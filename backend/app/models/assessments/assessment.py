@@ -42,3 +42,9 @@ class Assessment(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+
+    questions = relationship(
+        "Question",
+        back_populates="assessment",
+        cascade="all, delete-orphan"
+    )

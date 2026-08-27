@@ -13,6 +13,7 @@ from app.models.notifications.notification import Notification  # noqa: F401
 from app.models.results.result import Result  # noqa: F401
 from app.models.feedback.feedback import Feedback  # noqa: F401
 from app.models.assessments.assessment import Assessment  # noqa: F401
+from app.models.questions.question import Question  # noqa: F401
 
 app = FastAPI(title="Smart Recruiter API")
 
