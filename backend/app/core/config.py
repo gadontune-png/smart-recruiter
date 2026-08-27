@@ -26,6 +26,21 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # --- compatibility aliases for other members' modules ---
+    codewars_base_url: str = "https://www.codewars.com/api/v1"
+
+    @property
+    def database_url(self) -> str:
+        return self.DATABASE_URL
+
+    @property
+    def jwt_secret(self) -> str:
+        return self.SECRET_KEY
+
+    @property
+    def app_name(self) -> str:
+        return self.PROJECT_NAME
+
 
 @lru_cache
 def get_settings() -> Settings:
