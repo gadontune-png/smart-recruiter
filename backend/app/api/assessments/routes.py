@@ -57,14 +57,6 @@ def get_assessment(
             detail="Assessment not found",
         )
 
-    if assessment.status == AssessmentStatus.PUBLISHED:
-        raise HTTPException(
-            status_code=400,
-            detail="Published assessments cannot be modified",
-    )
-    
-    update_data = payload.model_dump(exclude_unset=True)
-
     return assessment
 
 
