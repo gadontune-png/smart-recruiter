@@ -1,13 +1,15 @@
-# Backend dependencies (Python / FastAPI / PostgreSQL)
-# TODO: adjust versions when the backend is actually wired up
-
 fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
 pydantic
 pydantic-settings
+email-validator
+passlib[bcrypt]
+bcrypt==4.0.1
+python-jose[cryptography]
 python-dotenv
 alembic
 httpx
 pytest
+python-multipart
