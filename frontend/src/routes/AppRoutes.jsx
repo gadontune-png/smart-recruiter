@@ -135,10 +135,14 @@ export const router = createBrowserRouter([
                 path: ROUTES.TRIAL,
                 element: <TrialAssessmentPage />,
               },
-              {
-                path: ROUTES.WHITEBOARD,
-                element: <WhiteboardPage />,
-              },
+               {
+                 path: ROUTES.WHITEBOARD,
+                 element: <WhiteboardPage />,
+               },
+               {
+                 path: ROUTES.WHITEBOARD_ASSESSMENT,
+                 element: <WhiteboardPage />,
+               },
             ],
           },
           {

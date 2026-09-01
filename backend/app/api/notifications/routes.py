@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.notifications.notification import Notification
 from app.schemas.notification import NotificationOut
+from app.services.notification_service import NotificationService, EmailService
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+
+notification_service = NotificationService()
 
 
 @router.get("", response_model=List[NotificationOut])
@@ -26,3 +29,52 @@ def mark_as_read(notification_id: uuid.UUID, db: Session = Depends(get_db)):
     db.refresh(notification)
     return notification
 
+
+@router.post("/send-question-email")
+def send_question_email(
+    recipient_email: str,
+    recipient_name: str,
+    assessment_title: str,
+    question_text: str,
+    question_type: str,
+    points: int,
+    deadline: str = None,
+    db: Session = Depends(get_db),
+):
+    success = notification_service.send_question_assigned_email(
+        recipient_email,
+        recipient_name,
+        assessment_title,
+        question_text,
+        question_type,
+        points,
+        deadline,
+    )
+    return {
+        "success": success,
+        "message": "Question notification email sent successfully" if success else "Failed to send email",
+    }
+
+
+@router.post("/send-assessment-invitation")
+def send_assessment_invitation_email(
+    recipient_email: str,
+    recipient_name: str,
+    recruiter_name: str,
+    assessment_title: str,
+    invitation_link: str,
+    deadline: str = None,
+    db: Session = Depends(get_db),
+):
+    success = notification_service.send_assessment_invitation_email(
+        recipient_email,
+        recipient_name,
+        recruiter_name,
+        assessment_title,
+        invitation_link,
+        deadline,
+    )
+    return {
+        "success": success,
+        "message": "Assessment invitation email sent successfully" if success else "Failed to send email",
+    }

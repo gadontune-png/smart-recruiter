@@ -20,3 +20,8 @@ env/
 .vscode/
 .idea/
 .DS_Store
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3

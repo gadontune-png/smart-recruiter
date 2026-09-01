@@ -2,7 +2,8 @@ import uuid
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Enum
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.types import CHAR, TypeDecorator
 
@@ -40,11 +41,13 @@ class Invitation(Base):
     __tablename__ = "invitations"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    assessment_id = Column(GUID(), nullable=False)  # FK to Member 2's assessments table
-    interviewee_id = Column(GUID(), nullable=False)  # FK to Member 1's users table
+    assessment_id = Column(Integer, ForeignKey("assessments.assessment_id"), nullable=False)
+    interviewee_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     status = Column(Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False)
     scheduled_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=True)
     accepted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    interviewee = relationship("User", back_populates="invitations_created")
+    assessment = relationship("Assessment", back_populates="invitations")

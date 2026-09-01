@@ -36,6 +36,7 @@ export const ROUTES = Object.freeze({
   },
   TRIAL: "/trial",
   WHITEBOARD: "/whiteboard",
+  WHITEBOARD_ASSESSMENT: "/whiteboard/:assessmentId",
   ASSESSMENT: "/assessment/:id",
 });
 

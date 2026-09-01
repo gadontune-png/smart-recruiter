@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime
 from typing import Optional, List
 
@@ -8,23 +7,23 @@ from app.models.invitations.invitation import InvitationStatus
 
 
 class InvitationCreate(BaseModel):
-    assessment_id: uuid.UUID
-    interviewee_id: uuid.UUID
+    assessment_id: int
+    interviewee_id: int
     scheduled_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
 
 
 class InvitationBulkCreate(BaseModel):
-    assessment_id: uuid.UUID
-    interviewee_ids: List[uuid.UUID]
+    assessment_id: int
+    interviewee_ids: List[int]
     scheduled_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
 
 
 class InvitationOut(BaseModel):
-    id: uuid.UUID
-    assessment_id: uuid.UUID
-    interviewee_id: uuid.UUID
+    id: str
+    assessment_id: int
+    interviewee_id: int
     status: InvitationStatus
     scheduled_at: Optional[datetime]
     expires_at: Optional[datetime]
@@ -32,4 +31,3 @@ class InvitationOut(BaseModel):
 
     class Config:
         from_attributes = True
-
