@@ -1,30 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Users, ArrowRight } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { ROUTES } from "../../utils/constants";
+import { ROUTES, API_URL } from "../../utils/constants";
 import "./recruiter.css";
 
-const ASSESSMENTS = [
-  { title: "Senior React Dev Challenge", difficulty: "Hard", status: "Active", questions: 12, duration: 60, invited: 42 },
-  { title: "Node.js System Design Test", difficulty: "Hard", status: "Active", questions: 8, duration: 90, invited: 28 },
-  { title: "DevOps Kubernetes Assessment", difficulty: "Medium", status: "Active", questions: 15, duration: 120, invited: 15 },
-  { title: "Python Junior Intern Challenge", difficulty: "Easy", status: "Active", questions: 25, duration: 45, invited: 65 },
-  { title: "Golang Microservices API", difficulty: "Hard", status: "Draft", questions: 10, duration: 60, invited: 12 },
-  { title: "UX/UI Design Foundations", difficulty: "Easy", status: "Inactive", questions: 15, duration: 45, invited: 8 },
-];
-
 const DIFFICULTY_TONES = { Hard: "danger", Medium: "warning", Easy: "success" };
-const STATUS_TONES = { Active: "success", Draft: "warning", Inactive: "neutral" };
+const STATUS_TONES = { Active: "success", Published: "success", Draft: "warning", Inactive: "neutral" };
 
 function RecruiterAssessmentsPage() {
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("All");
+  const [assessments, setAssessments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const difficulties = ["All", "Easy", "Medium", "Hard"];
 
-  const filtered = ASSESSMENTS.filter((assessment) => {
+  useEffect(() => {
+    async function fetchAssessments() {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_URL}/assessments/my`);
+        if (!res.ok) throw new Error("Failed to fetch assessments");
+        const data = await res.json();
+
+        const withQuestions = await Promise.all(
+          data.map(async (a) => {
+            try {
+              const qRes = await fetch(`${API_URL}/assessments/${a.assessment_id}/questions`);
+              if (!qRes.ok) return { ...a, questions: 0 };
+              const qData = await qRes.json();
+              return { ...a, questions: qData.length || 0 };
+            } catch {
+              return { ...a, questions: 0 };
+            }
+          })
+        );
+
+        setAssessments(withQuestions);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAssessments();
+  }, []);
+
+  const filtered = assessments.filter((assessment) => {
     const matchesSearch = assessment.title
       .toLowerCase()
       .includes(query.toLowerCase());
@@ -73,43 +98,54 @@ function RecruiterAssessmentsPage() {
         </div>
       </div>
 
-      <div className="assessment-grid">
-        {filtered.map((assessment) => (
-          <div className="assessment-card panel" key={assessment.title}>
-            <div className="assessment-card-top">
-              <Badge variant={DIFFICULTY_TONES[assessment.difficulty]}>
-                {assessment.difficulty}
-              </Badge>
-              <Badge variant={STATUS_TONES[assessment.status]}>
-                {assessment.status}
-              </Badge>
-            </div>
+      {loading && <p>Loading assessments...</p>}
+      {error && <p className="error-message">{error}</p>}
 
-            <h3>{assessment.title}</h3>
-            <p className="assessment-meta">Created by System Admin</p>
+      {!loading && !error && filtered.length === 0 && (
+        <div className="empty-state">
+          <p>No assessments found.</p>
+        </div>
+      )}
 
-            <div className="assessment-card-stats">
-              <span>
-                <strong>{assessment.questions}</strong> Questions
-              </span>
-              <span className="dot-sep">·</span>
-              <span>
-                <strong>{assessment.duration}</strong> mins
-              </span>
-            </div>
+      {!loading && !error && filtered.length > 0 && (
+        <div className="assessment-grid">
+          {filtered.map((assessment) => (
+            <div className="assessment-card panel" key={assessment.assessment_id}>
+              <div className="assessment-card-top">
+                <Badge variant={DIFFICULTY_TONES[assessment.difficulty] || "warning"}>
+                  {assessment.difficulty || "Medium"}
+                </Badge>
+                <Badge variant={STATUS_TONES[assessment.status] || "neutral"}>
+                  {assessment.status || "Draft"}
+                </Badge>
+              </div>
 
-            <div className="assessment-card-foot">
-              <Link to={ROUTES.RECRUITER.GRADING} className="link-arrow">
-                View Results <ArrowRight size={14} />
-              </Link>
-              <span className="assessment-invited">
-                <Users size={14} />
-                {assessment.invited} Invited
-              </span>
+              <h3>{assessment.title}</h3>
+              <p className="assessment-meta">Created by System Admin</p>
+
+              <div className="assessment-card-stats">
+                <span>
+                  <strong>{assessment.questions}</strong> Questions
+                </span>
+                <span className="dot-sep">·</span>
+                <span>
+                  <strong>{assessment.time_limit_minutes}</strong> mins
+                </span>
+              </div>
+
+              <div className="assessment-card-foot">
+                <Link to={ROUTES.RECRUITER.GRADING} className="link-arrow">
+                  View Results <ArrowRight size={14} />
+                </Link>
+                <span className="assessment-invited">
+                  <Users size={14} />
+                  N/A
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

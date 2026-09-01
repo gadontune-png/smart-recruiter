@@ -1,23 +1,23 @@
-import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class FeedbackCreate(BaseModel):
-    answer_id: uuid.UUID
-    recruiter_id: uuid.UUID
+    answer_id: int
+    recruiter_id: int
     comment: str
+    score: Optional[float] = None
 
 
 class FeedbackOut(BaseModel):
-    id: uuid.UUID
-    answer_id: uuid.UUID
-    recruiter_id: uuid.UUID
+    feedback_id: int
+    answer_id: int
+    recruiter_id: int
     comment: str
-    released: bool
+    score: Optional[float] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
-

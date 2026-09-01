@@ -1,51 +1,117 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, GripVertical, Trash2 } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { Input, Textarea, Select } from "../../components/forms";
+import { questionService } from "../../services/assessmentService";
 import "./recruiter.css";
 import "./recruiter-question-builder.css";
 
-const INITIAL_QUESTIONS = [
-  { id: 1, title: "Implement a deep clone helper", category: "React", points: 10 },
-  { id: 2, title: "State slice reconciliation", category: "React", points: 15 },
-  { id: 3, title: "Optimize expensive rendering logic", category: "React", points: 15 },
-  { id: 4, title: "CSS Flexbox layouts", category: "HTML/CSS", points: 5 },
-  { id: 5, title: "Validate balanced brackets", category: "Algorithms", points: 20 },
-];
-
-const INITIAL_OPTIONS = [
-  "JSON.parse(JSON.stringify(obj))",
-  "Writing a recursive key-by-key map iteration",
-  "Object.assign({}, obj) reference copy",
-  "Utilizing custom lodash.cloneDeep utility",
-];
+function mapBackendQuestion(q) {
+  return {
+    id: q.question_id,
+    title: q.question_text || "Untitled question",
+    category: q.language || "General",
+    points: q.points ?? 0,
+    question_type: q.question_type || "multiple_choice",
+    description: q.description || "",
+    starter_code: q.starter_code || "",
+    time_limit: q.timelimit_seconds || 0,
+  };
+}
 
 function RecruiterQuestionsPage() {
-  const [questions, setQuestions] = useState(INITIAL_QUESTIONS);
-  const [selectedId, setSelectedId] = useState(1);
-  const [title, setTitle] = useState("Implement a deep clone helper");
-  const [prompt, setPrompt] = useState(
-    "Write a function that accepts an object and returns a deep copy of that object. Ensure circular references do not throw.",
-  );
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [title, setTitle] = useState("");
+  const [prompt, setPrompt] = useState("");
   const [qType, setQType] = useState("Multiple Choice");
   const [difficulty, setDifficulty] = useState("Medium");
   const [points, setPoints] = useState("10 pts");
-  const [options, setOptions] = useState(INITIAL_OPTIONS);
+  const [options, setOptions] = useState(["", "", "", ""]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        const data = await questionService.listQuestions();
+        const mapped = (Array.isArray(data) ? data : []).map(mapBackendQuestion);
+        if (cancelled) return;
+        setQuestions(mapped);
+        if (mapped.length > 0) {
+          setSelectedId(mapped[0].id);
+          populateEditor(mapped[0]);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Failed to load questions");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  function populateEditor(q) {
+    setTitle(q.title);
+    setPrompt(q.description);
+    setQType(q.question_type === "coding" ? "Coding Challenge" : q.question_type === "free_text" ? "Free Text" : "Multiple Choice");
+    setPoints(`${q.points} pts`);
+  }
 
   function handleSelect(id) {
     setSelectedId(id);
+    const q = questions.find((q) => q.id === id);
+    if (q) populateEditor(q);
   }
 
   function addQuestion() {
-    const next = { id: Date.now(), title: "Untitled question", category: "General", points: 5 };
+    const next = { id: Date.now(), title: "Untitled question", category: "General", points: 5, question_type: "multiple_choice", description: "", starter_code: "", time_limit: 0 };
     setQuestions((current) => [...current, next]);
     setSelectedId(next.id);
+    populateEditor(next);
   }
 
   function deleteQuestion(id) {
     setQuestions((current) => current.filter((q) => q.id !== id));
-    if (selectedId === id) setSelectedId(questions.find((q) => q.id !== id)?.id);
+    if (selectedId === id) {
+      const remaining = questions.filter((q) => q.id !== id);
+      if (remaining.length > 0) {
+        setSelectedId(remaining[0].id);
+        populateEditor(remaining[0]);
+      } else {
+        setSelectedId(null);
+        setTitle("");
+        setPrompt("");
+      }
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="question-builder">
+        <div className="page-header">
+          <p className="breadcrumb">Assessments / Question Builder</p>
+          <h1>Question Builder</h1>
+        </div>
+        <p style={{ padding: "2rem", textAlign: "center", color: "#888" }}>Loading questions...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="question-builder">
+        <div className="page-header">
+          <p className="breadcrumb">Assessments / Question Builder</p>
+          <h1>Question Builder</h1>
+        </div>
+        <p style={{ padding: "2rem", textAlign: "center", color: "#c00" }}>{error}</p>
+      </div>
+    );
   }
 
   return (
@@ -60,42 +126,48 @@ function RecruiterQuestionsPage() {
           <div className="panel-heading">
             <h2>Questions in Assessment</h2>
           </div>
-          <ul className="qb-question-list">
-            {questions.map((question) => (
-              <li key={question.id}>
-                <button
-                  type="button"
-                  className={`qb-question-item ${selectedId === question.id ? "active" : ""}`}
-                  onClick={() => handleSelect(question.id)}
-                >
-                  <GripVertical size={16} className="qb-grip" />
-                  <span className="qb-question-titles">
-                    <strong>{question.title}</strong>
-                    <small>
-                      {question.category} <span>·</span> {question.points} pts
-                    </small>
-                  </span>
+          {questions.length === 0 ? (
+            <p style={{ padding: "2rem", textAlign: "center", color: "#888" }}>
+              No questions yet. Click "Add New Question" to create one.
+            </p>
+          ) : (
+            <ul className="qb-question-list">
+              {questions.map((question) => (
+                <li key={question.id}>
                   <button
                     type="button"
-                    className="qb-delete"
-                    aria-label={`Delete ${question.title}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteQuestion(question.id);
-                    }}
+                    className={`qb-question-item ${selectedId === question.id ? "active" : ""}`}
+                    onClick={() => handleSelect(question.id)}
                   >
-                    <Trash2 size={15} />
+                    <GripVertical size={16} className="qb-grip" />
+                    <span className="qb-question-titles">
+                      <strong>{question.title}</strong>
+                      <small>
+                        {question.category} <span>·</span> {question.points} pts
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      className="qb-delete"
+                      aria-label={`Delete ${question.title}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteQuestion(question.id);
+                      }}
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </button>
-                </button>
-              </li>
-            ))}
-            <li>
-              <button type="button" className="qb-add-question" onClick={addQuestion}>
-                <Plus size={16} />
-                Add New Question
-              </button>
-            </li>
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div style={{ padding: "0.75rem 1rem" }}>
+            <button type="button" className="qb-add-question" onClick={addQuestion}>
+              <Plus size={16} />
+              Add New Question
+            </button>
+          </div>
         </section>
 
         <section className="panel qb-editor">

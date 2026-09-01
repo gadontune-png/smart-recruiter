@@ -1,19 +1,17 @@
-import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
-from app.models.notifications.notification import NotificationType
-
 
 class NotificationOut(BaseModel):
-    id: uuid.UUID
-    user_id: uuid.UUID
-    type: NotificationType
+    notification_id: int
+    user_id: int
+    title: str
     message: str
+    notification_type: Optional[str] = None
     is_read: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
-

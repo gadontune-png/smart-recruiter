@@ -1,37 +1,136 @@
+import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Clock, Trophy } from "lucide-react";
 import Badge from "../../components/common/Badge";
+import { API_URL } from "../../utils/constants";
 import "./recruiter.css";
 import "./recruiter-results.css";
 
-const STATS = [
-  { label: "Total Submissions", value: "342", delta: "+24% from last cohort", icon: BarChart3, tone: "blue" },
-  { label: "Pass Rate", value: "68%", delta: "Target baseline: > 65%", icon: Trophy, tone: "green" },
-  { label: "Average Duration", value: "45 mins", delta: "+3m variance", icon: Clock, tone: "amber" },
-  { label: "Top Score", value: "98%", delta: "Sarah Connor (React Challenge)", icon: TrendingUp, tone: "red" },
-];
-
-const SCORE_DISTRIBUTION = [
-  { label: "<40%", value: 8 },
-  { label: "40-59%", value: 15 },
-  { label: "60-79%", value: 32 },
-  { label: "80-89%", value: 27 },
-  { label: "90-100%", value: 18 },
-];
-
-const WEEKLY = [
-  { label: "Week 1", volume: 40, completion: 35 },
-  { label: "Week 2", volume: 55, completion: 48 },
-  { label: "Week 3", volume: 62, completion: 54 },
-  { label: "Week 4", volume: 78, completion: 70 },
-];
-
-const CANDIDATES = [
-  { name: "John Doe", assessment: "Senior React Developer Challenge", score: "94%", time: "38 min", status: "Pass" },
-  { name: "Alice Smith", assessment: "Node.js System Design Test", score: "78%", time: "44 min", status: "Pass" },
-  { name: "Bob Johnson", assessment: "DevOps Kubernetes Assessment", score: "55%", time: "52 min", status: "Fail" },
-];
-
 function RecruiterResultsPage() {
+  const [assessments, setAssessments] = useState([]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("sr_auth");
+        const headers = { "Content-Type": "application/json" };
+        if (token) {
+          try {
+            const parsed = JSON.parse(token);
+            if (parsed.token) headers["Authorization"] = `Bearer ${parsed.token}`;
+          } catch {}
+        }
+
+        const assessmentsRes = await fetch(`${API_URL}/assessments/my`, { headers });
+        const assessmentsData = assessmentsRes.ok ? await assessmentsRes.json() : [];
+
+        const allResults = [];
+        for (const assessment of assessmentsData) {
+          try {
+            const res = await fetch(`${API_URL}/assessments/${assessment.assessment_id}/results`, { headers });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data)) {
+                for (const r of data) {
+                  allResults.push({
+                    ...r,
+                    assessment_title: assessment.title,
+                  });
+                }
+              }
+            }
+          } catch {}
+        }
+
+        if (cancelled) return;
+        setAssessments(Array.isArray(assessmentsData) ? assessmentsData : []);
+        setResults(allResults);
+      } catch {
+        // silently handle
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const totalSubmissions = results.length;
+  const passCount = results.filter((r) => (r.total_score ?? 0) >= 60).length;
+  const passRate = totalSubmissions > 0 ? Math.round((passCount / totalSubmissions) * 100) : 0;
+  const avgScore = totalSubmissions > 0
+    ? Math.round(results.reduce((sum, r) => sum + (r.total_score ?? 0), 0) / totalSubmissions)
+    : 0;
+  const topScore = totalSubmissions > 0
+    ? Math.max(...results.map((r) => r.total_score ?? 0))
+    : 0;
+
+  const stats = [
+    { label: "Total Assessments", value: String(assessments.length), delta: `${results.length} total results`, icon: BarChart3, tone: "blue" },
+    { label: "Pass Rate", value: `${passRate}%`, delta: "Target baseline: > 65%", icon: Trophy, tone: "green" },
+    { label: "Average Score", value: `${avgScore}%`, delta: "Across all submissions", icon: Clock, tone: "amber" },
+    { label: "Top Score", value: `${topScore}%`, delta: totalSubmissions > 0 ? "Across all assessments" : "No data yet", icon: TrendingUp, tone: "red" },
+  ];
+
+  function buildScoreDistribution() {
+    if (results.length === 0) return [];
+    const buckets = [
+      { label: "<40%", min: 0, max: 40, value: 0 },
+      { label: "40-59%", min: 40, max: 60, value: 0 },
+      { label: "60-79%", min: 60, max: 80, value: 0 },
+      { label: "80-89%", min: 80, max: 90, value: 0 },
+      { label: "90-100%", min: 90, max: 101, value: 0 },
+    ];
+    for (const r of results) {
+      const score = r.total_score ?? 0;
+      for (const b of buckets) {
+        if (score >= b.min && score < b.max) { b.value++; break; }
+      }
+    }
+    const maxVal = Math.max(...buckets.map((b) => b.value), 1);
+    return buckets.map((b) => ({ label: b.label, value: Math.round((b.value / maxVal) * 100) }));
+  }
+
+  function buildWeeklyData() {
+    if (results.length === 0) return [];
+    const weekMap = {};
+    for (const r of results) {
+      if (!r.calculated_at) continue;
+      const d = new Date(r.calculated_at);
+      const startOfYear = new Date(d.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+      const key = `Week ${weekNum}`;
+      if (!weekMap[key]) weekMap[key] = { volume: 0, completion: 0 };
+      weekMap[key].volume++;
+      if (r.grade_released) weekMap[key].completion++;
+    }
+    const entries = Object.entries(weekMap).slice(-4);
+    const maxVol = Math.max(...entries.map(([, v]) => v.volume), 1);
+    return entries.map(([label, v]) => ({
+      label,
+      volume: Math.round((v.volume / maxVol) * 100),
+      completion: Math.round((v.completion / maxVol) * 100),
+    }));
+  }
+
+  const scoreDistribution = buildScoreDistribution();
+  const weeklyData = buildWeeklyData();
+
+  if (loading) {
+    return (
+      <div className="recruiter-results">
+        <div className="page-header">
+          <p className="breadcrumb">Smart Recruiter / Results / Analytics &amp; Stats</p>
+          <h1>Operational Statistics</h1>
+        </div>
+        <p style={{ padding: "2rem", textAlign: "center", color: "#888" }}>Loading results...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="recruiter-results">
       <div className="page-header">
@@ -40,7 +139,7 @@ function RecruiterResultsPage() {
       </div>
 
       <div className="stat-grid">
-        {STATS.map((stat) => (
+        {stats.map((stat) => (
           <div className="stat-card" key={stat.label}>
             <span className={`stat-card-icon stat-icon-${stat.tone}`}>
               <stat.icon size={20} />
@@ -60,16 +159,22 @@ function RecruiterResultsPage() {
             <h2>Score Distribution</h2>
           </div>
           <div className="panel-body">
-            <div className="bar-chart">
-              {SCORE_DISTRIBUTION.map((bar) => (
-                <div className="bar-col" key={bar.label}>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ height: `${bar.value}%` }} />
+            {scoreDistribution.length === 0 ? (
+              <p style={{ padding: "2rem", textAlign: "center", color: "#888" }}>
+                No score data available yet.
+              </p>
+            ) : (
+              <div className="bar-chart">
+                {scoreDistribution.map((bar) => (
+                  <div className="bar-col" key={bar.label}>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ height: `${bar.value}%` }} />
+                    </div>
+                    <span className="bar-label">{bar.label}</span>
                   </div>
-                  <span className="bar-label">{bar.label}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -78,23 +183,29 @@ function RecruiterResultsPage() {
             <h2>Weekly Test Volume &amp; Completion Trend</h2>
           </div>
           <div className="panel-body">
-            <div className="bar-chart">
-              {WEEKLY.map((week) => (
-                <div className="bar-col" key={week.label}>
-                  <div className="week-legend">
-                    <i className="legend-vol" /> Volume
-                    <i className="legend-comp" /> Completion
+            {weeklyData.length === 0 ? (
+              <p style={{ padding: "2rem", textAlign: "center", color: "#888" }}>
+                No weekly data available yet.
+              </p>
+            ) : (
+              <div className="bar-chart">
+                {weeklyData.map((week) => (
+                  <div className="bar-col" key={week.label}>
+                    <div className="week-legend">
+                      <i className="legend-vol" /> Volume
+                      <i className="legend-comp" /> Completion
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill bar-volume" style={{ height: `${week.volume}%` }} />
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill bar-completion" style={{ height: `${week.completion}%` }} />
+                    </div>
+                    <span className="bar-label">{week.label}</span>
                   </div>
-                  <div className="bar-track">
-                    <div className="bar-fill bar-volume" style={{ height: `${week.volume}%` }} />
-                  </div>
-                  <div className="bar-track">
-                    <div className="bar-fill bar-completion" style={{ height: `${week.completion}%` }} />
-                  </div>
-                  <span className="bar-label">{week.label}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -104,42 +215,44 @@ function RecruiterResultsPage() {
           <h2>Detailed Candidate Results</h2>
         </div>
         <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Candidate Name</th>
-                <th>Assessment Title</th>
-                <th>Test Score</th>
-                <th>Time Spent</th>
-                <th>Status</th>
-                <th>Decision</th>
-              </tr>
-            </thead>
-            <tbody>
-              {CANDIDATES.map((candidate) => (
-                <tr key={candidate.name}>
-                  <td className="cell-strong">{candidate.name}</td>
-                  <td>{candidate.assessment}</td>
-                  <td className="cell-score">{candidate.score}</td>
-                  <td>{candidate.time}</td>
-                  <td>
-                    <Badge
-                      variant={candidate.status === "Pass" ? "success" : "danger"}
-                    >
-                      {candidate.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <Badge
-                      variant={candidate.status === "Pass" ? "success" : "danger"}
-                    >
-                      {candidate.status === "Pass" ? "Shortlist" : "Reject"}
-                    </Badge>
-                  </td>
+          {results.length === 0 ? (
+            <p style={{ padding: "2rem", textAlign: "center", color: "#888" }}>
+              No candidate results available yet.
+            </p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Candidate ID</th>
+                  <th>Assessment</th>
+                  <th>Score</th>
+                  <th>Calculated At</th>
+                  <th>Status</th>
+                  <th>Grade Released</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {results.map((r) => (
+                  <tr key={r.id}>
+                    <td className="cell-strong">Candidate #{r.interviewee_id}</td>
+                    <td>{r.assessment_title}</td>
+                    <td className="cell-score">{r.total_score ?? "N/A"}%</td>
+                    <td>{r.calculated_at ? new Date(r.calculated_at).toLocaleDateString() : "N/A"}</td>
+                    <td>
+                      <Badge variant={(r.total_score ?? 0) >= 60 ? "success" : "danger"}>
+                        {(r.total_score ?? 0) >= 60 ? "Pass" : "Fail"}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge variant={r.grade_released ? "success" : "warning"}>
+                        {r.grade_released ? "Released" : "Pending"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
     </div>

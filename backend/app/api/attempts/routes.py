@@ -63,7 +63,7 @@ def _assert_enrolled(db, assessment_id, user: User):
         .filter(Assessment.assessment_id == assessment_id)
         .first()
     )
-    if not assessment or assessment.status != "published":
+    if not assessment or assessment.status != "PUBLISHED":
         raise HTTPException(
             status_code=400, detail="Assessment is not available"
         )

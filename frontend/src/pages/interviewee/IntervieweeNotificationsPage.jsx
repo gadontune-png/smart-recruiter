@@ -1,81 +1,55 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Bell, CheckCheck, Clock3, Inbox, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { API_URL } from "../../utils/constants";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import EmptyState from "../../components/common/EmptyState";
 import "./interviewee-notifications.css";
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: "Assessment invitation",
-    title: "New assessment invitation received",
-    message: "You have been invited to take the Frontend Developer Assessment on August 21 at 10:00 AM.",
-    time: "10 minutes ago",
-    category: "Invitation",
-    read: false,
-  },
-  {
-    id: 2,
-    type: "Assessment reminder",
-    title: "Upcoming assessment reminder",
-    message: "Your JavaScript Fundamentals Assessment starts tomorrow at 2:00 PM. Please prepare your notes.",
-    time: "2 hours ago",
-    category: "Reminder",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "Grade released",
-    title: "Assessment grade is available",
-    message: "Your JavaScript Assessment grade has been released and is ready for review.",
-    time: "Yesterday",
-    category: "Results",
-    read: true,
-  },
-  {
-    id: 4,
-    type: "Mentor feedback",
-    title: "Mentor feedback received",
-    message: "Your mentor left new feedback on the HTML & CSS Assessment. Review the comments and suggestions.",
-    time: "2 days ago",
-    category: "Feedback",
-    read: false,
-  },
-  {
-    id: 5,
-    type: "Schedule update",
-    title: "Assessment schedule changed",
-    message: "The React Developer Assessment time has been updated. Please review the new schedule.",
-    time: "3 days ago",
-    category: "Schedule",
-    read: true,
-  },
-];
-
 function IntervieweeNotificationsPage() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (!user?.user_id) return;
+    fetch(`${API_URL}/notifications?user_id=${user.user_id}`)
+      .then((res) => res.json())
+      .then((data) => setNotifications(Array.isArray(data) ? data : []))
+      .catch(() => setNotifications([]));
+  }, [user?.user_id]);
 
   const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.read).length,
+    () => notifications.filter((notification) => !notification.is_read).length,
     [notifications]
   );
 
   const handleMarkAsRead = (id) => {
     setNotifications((currentNotifications) =>
       currentNotifications.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
+        notification.notification_id === id ? { ...notification, is_read: true } : notification
       )
     );
   };
 
   const handleMarkAllAsRead = () => {
     setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) => ({ ...notification, read: true }))
+      currentNotifications.map((notification) => ({ ...notification, is_read: true }))
     );
+  };
+
+  const getCategoryFromType = (type) => {
+    if (!type) return "General";
+    const lower = type.toLowerCase();
+    if (lower.includes("invitation")) return "Invitation";
+    if (lower.includes("reminder")) return "Reminder";
+    if (lower.includes("grade") || lower.includes("result")) return "Results";
+    if (lower.includes("feedback")) return "Feedback";
+    if (lower.includes("schedule")) return "Schedule";
+    return "General";
   };
 
   return (
@@ -138,41 +112,43 @@ function IntervieweeNotificationsPage() {
           />
         ) : (
           <div className="notifications-list">
-            {notifications.map((notification) => (
-              <Card key={notification.id} padded>
-                <div className={`notification-item ${notification.read ? "read" : "unread"}`}>
-                  <div className="notification-badge-wrap">
-                    <div className="notification-icon">
-                      {notification.category === "Invitation" ? <CheckCheck size={18} /> : notification.category === "Reminder" ? <Clock3 size={18} /> : notification.category === "Feedback" ? <Bell size={18} /> : <Inbox size={18} />}
-                    </div>
-
-                    <div className="notification-meta">
-                      <div className="notification-head">
-                        <Badge variant={notification.read ? "secondary" : "info"}>
-                          {notification.category}
-                        </Badge>
-                        {!notification.read && (
-                          <span className="unread-dot" aria-label="Unread notification" />
-                        )}
+            {notifications.map((notification) => {
+              const category = getCategoryFromType(notification.title);
+              return (
+                <Card key={notification.notification_id} padded>
+                  <div className={`notification-item ${notification.is_read ? "read" : "unread"}`}>
+                    <div className="notification-badge-wrap">
+                      <div className="notification-icon">
+                        {category === "Invitation" ? <CheckCheck size={18} /> : category === "Reminder" ? <Clock3 size={18} /> : category === "Feedback" ? <Bell size={18} /> : <Inbox size={18} />}
                       </div>
 
-                      <h3>{notification.title}</h3>
-                      <p>{notification.message}</p>
-                      <div className="notification-footer">
-                        <small>{notification.time}</small>
-                        {notification.type && <span>{notification.type}</span>}
+                      <div className="notification-meta">
+                        <div className="notification-head">
+                          <Badge variant={notification.is_read ? "secondary" : "info"}>
+                            {notification.notification_type || category}
+                          </Badge>
+                          {!notification.is_read && (
+                            <span className="unread-dot" aria-label="Unread notification" />
+                          )}
+                        </div>
+
+                        <h3>{notification.title}</h3>
+                        <p>{notification.message}</p>
+                        <div className="notification-footer">
+                          <small>{notification.created_at}</small>
+                        </div>
                       </div>
                     </div>
+
+                    {!notification.is_read && (
+                      <Button size="sm" variant="secondary" onClick={() => handleMarkAsRead(notification.notification_id)}>
+                        Mark as read
+                      </Button>
+                    )}
                   </div>
-
-                  {!notification.read && (
-                    <Button size="sm" variant="secondary" onClick={() => handleMarkAsRead(notification.id)}>
-                      Mark as read
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/assessments", tags=["assessments"])
 
 @router.get("/", response_model=list[AssessmentOut])
 def list_assessments(db: Session = Depends(get_db)):
-    return db.query(Assessment).filter(Assessment.status == "published").all()
+    return db.query(Assessment).filter(Assessment.status == "PUBLISHED").all()
 
 
 @router.get("/my", response_model=list[AssessmentOut])

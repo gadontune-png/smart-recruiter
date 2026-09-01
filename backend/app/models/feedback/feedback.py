@@ -1,19 +1,18 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Text, Boolean
+from sqlalchemy import Column, DateTime, Text, Boolean, Integer, Numeric
 
 from app.core.database import Base
-from app.models.invitations.invitation import GUID
 
 
 class Feedback(Base):
     __tablename__ = "feedback"
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    answer_id = Column(GUID(), nullable=False)  # FK to Member 3's answers table
-    recruiter_id = Column(GUID(), nullable=False)  # FK to Member 1's users table
+    feedback_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    answer_id = Column(Integer, nullable=False)
+    recruiter_id = Column(Integer, nullable=False)
     comment = Column(Text, nullable=False)
-    released = Column(Boolean, default=False, nullable=False)
+    score = Column(Numeric(5, 2), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

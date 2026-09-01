@@ -1,34 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UploadCloud, Mail, UserPlus } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { Input, Select } from "../../components/forms";
+import { API_URL } from "../../utils/constants";
 import "./recruiter.css";
 import "./recruiter-invitations.css";
 
-const SENT_LOG = [
-  { email: "dev.candidate@gmail.com", assessment: "Senior React Developer Challenge", date: "Oct 24, 2026", status: "Pending" },
-  { email: "systems.architect@outlook.com", assessment: "Node.js System Design Test", date: "Oct 23, 2026", status: "Accepted" },
-  { email: "junior.intern@university.edu", assessment: "Python Junior Intern Assessment", date: "Oct 15, 2026", status: "Expired" },
-];
-
-const STATUS_TONES = { Pending: "warning", Accepted: "success", Expired: "neutral" };
+const STATUS_TONES = { PENDING: "warning", ACCEPTED: "success", EXPIRED: "neutral" };
 
 function RecruiterInvitationsPage() {
   const [filter, setFilter] = useState("All");
-  const [email, setEmail] = useState("");
+  const [intervieweeId, setIntervieweeId] = useState("");
   const [added, setAdded] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [selectedAssessment, setSelectedAssessment] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const statuses = ["All", "Pending", "Accepted", "Expired"];
+  const statuses = ["All", "PENDING", "ACCEPTED", "EXPIRED"];
 
-  const rows = SENT_LOG.filter(
+  useEffect(() => {
+    fetchInvitations();
+    fetchAssessments();
+  }, []);
+
+  async function fetchInvitations() {
+    try {
+      const res = await fetch(`${API_URL}/invitations`);
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch invitations", err);
+    }
+  }
+
+  async function fetchAssessments() {
+    try {
+      const res = await fetch(`${API_URL}/assessments/my`);
+      if (res.ok) {
+        const data = await res.json();
+        setAssessments(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch assessments", err);
+    }
+  }
+
+  const rows = invitations.filter(
     (row) => filter === "All" || row.status === filter
   );
 
   function handleAdd() {
-    if (!email.trim()) return;
-    setAdded((current) => [...current, email.trim()]);
-    setEmail("");
+    if (!intervieweeId.trim()) return;
+    setAdded((current) => [...current, intervieweeId.trim()]);
+    setIntervieweeId("");
+  }
+
+  async function handleSendInvitation() {
+    if (!selectedAssessment || added.length === 0) return;
+    setLoading(true);
+    try {
+      for (const candidateId of added) {
+        await fetch(`${API_URL}/invitations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assessment_id: Number(selectedAssessment),
+            interviewee_id: Number(candidateId),
+          }),
+        });
+      }
+      setAdded([]);
+      fetchInvitations();
+    } catch (err) {
+      console.error("Failed to send invitations", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -47,26 +98,31 @@ function RecruiterInvitationsPage() {
           <div className="panel-body">
             <Select
               label="Select Assessment"
-              value="Senior React Developer Challenge"
-              options={[
-                { value: "Senior React Developer Challenge", label: "Senior React Developer Challenge" },
-                { value: "Node.js System Design Test", label: "Node.js System Design Test" },
-                { value: "Python Junior Intern Assessment", label: "Python Junior Intern Assessment" },
-              ]}
+              value={selectedAssessment}
+              onChange={(e) => setSelectedAssessment(e.target.value)}
+              options={assessments.map((a) => ({
+                value: a.assessment_id,
+                label: a.title,
+              }))}
             />
             <Input
-              label="Candidate Email Address"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="enter-candidate-email@company.com"
+              label="Candidate ID"
+              value={intervieweeId}
+              onChange={(event) => setIntervieweeId(event.target.value)}
+              placeholder="e.g. 123"
             />
             <Button onClick={handleAdd}>Add</Button>
             {added.length > 0 && (
-              <ul className="added-emails">
-                {added.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              <>
+                <ul className="added-emails">
+                  {added.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <Button onClick={handleSendInvitation} disabled={loading}>
+                  {loading ? "Sending..." : "Send Invitations"}
+                </Button>
+              </>
             )}
           </div>
         </section>
@@ -108,7 +164,7 @@ function RecruiterInvitationsPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Email Address</th>
+                    <th>Candidate</th>
                     <th>Assessment Title</th>
                     <th>Sent Date</th>
                     <th>Status</th>
@@ -117,12 +173,12 @@ function RecruiterInvitationsPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.email}>
-                      <td className="cell-strong">{row.email}</td>
-                      <td>{row.assessment}</td>
-                      <td>{row.date}</td>
+                    <tr key={row.invitation_id}>
+                      <td className="cell-strong">Candidate #{row.interviewee_id}</td>
+                      <td>{assessments.find((a) => a.assessment_id === row.assessment_id)?.title || row.assessment_id}</td>
+                      <td>{row.invited_at ? new Date(row.invited_at).toLocaleDateString() : "N/A"}</td>
                       <td>
-                        <Badge variant={STATUS_TONES[row.status]}>{row.status}</Badge>
+                        <Badge variant={STATUS_TONES[row.status] || "neutral"}>{row.status}</Badge>
                       </td>
                       <td>
                         <div className="row-actions">

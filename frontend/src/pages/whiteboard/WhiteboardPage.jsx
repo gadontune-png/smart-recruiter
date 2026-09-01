@@ -35,22 +35,13 @@ const LANGUAGES = [
   { value: "cpp", label: "C++" },
 ];
 
-const DEFAULT_CODE = `/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nconst twoSum = function(nums, target) {\n    const map = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        const complement = target - nums[i];\n        if (map.has(complement)) {\n            return [map.get(complement), i];\n        }\n        map.set(nums[i], i);\n    }\n    return [];\n};\n\n// Test\nconsole.log(twoSum([2, 7, 11, 15], 9));`;
-
-const SAMPLE_TEST_CASES = [
-  { name: "Test Case 1: Standard Input", input: "[2, 7, 11, 15], target = 9", expected: "[0, 1]", passed: true },
-  { name: "Test Case 2: Out of Order", input: "[3, 2, 4], target = 6", expected: "[1, 2]", passed: true },
-  { name: "Test Case 3: Negative Numbers", input: "[-1, -3, 4, 2], target = -4", expected: "[0, 2]", passed: false },
-  { name: "Test Case 4: No Match", input: "[1, 2, 3], target = 100", expected: "[]", passed: false },
-];
-
 function WhiteboardPage() {
   const navigate = useNavigate();
   const params = useParams();
   const assessmentId = params.assessmentId;
 
   const [language, setLanguage] = useState("javascript");
-  const [code, setCode] = useState(DEFAULT_CODE);
+  const [code, setCode] = useState("");
   const [fontSize, setFontSize] = useState(14);
   const [ran, setRan] = useState(false);
   const [running, setRunning] = useState(false);
@@ -59,16 +50,18 @@ function WhiteboardPage() {
 
   const [question, setQuestion] = useState(null);
   const [assessment, setAssessment] = useState(null);
-  const [testCases, setTestCases] = useState(SAMPLE_TEST_CASES);
+  const [testCases, setTestCases] = useState([]);
   const [customInput, setCustomInput] = useState("");
   const [customOutput, setCustomOutput] = useState("");
   const [showCustomTest, setShowCustomTest] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [loading, setLoading] = useState(true);
   const timerRef = useRef(null);
 
   useEffect(() => {
     async function loadQuestion() {
       try {
+        setLoading(true);
         if (assessmentId) {
           const [assessData, questionData] = await Promise.all([
             assessmentService.getAssessment(assessmentId),
@@ -84,40 +77,11 @@ function WhiteboardPage() {
               setTimeLeft(assessData.time_limit_minutes * 60);
             }
           }
-        } else {
-          setQuestion({
-            id: "q-wb-1",
-            question_text: "Two Sum",
-            question_type: "coding",
-            points: 15,
-            difficulty: "Easy",
-            description:
-              "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
-            examples: [
-              {
-                input: "nums = [2,7,11,15], target = 9",
-                output: "[0,1]",
-                explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-              },
-              {
-                input: "nums = [3,2,4], target = 6",
-                output: "[1,2]",
-              },
-              {
-                input: "nums = [3,3], target = 6",
-                output: "[0,1]",
-              },
-            ],
-            constraints: [
-              "2 <= nums.length <= 104",
-              "-109 <= nums[i] <= 109",
-              "-109 <= target <= 109",
-              "Only one valid answer exists.",
-            ],
-          });
         }
       } catch (err) {
         console.error("Failed to load question:", err);
+      } finally {
+        setLoading(false);
       }
     }
     loadQuestion();
@@ -150,9 +114,9 @@ function WhiteboardPage() {
   const handleLanguageChange = (event) => setLanguage(event.target.value);
 
   const handleReset = () => {
-    setCode(DEFAULT_CODE);
+    setCode(question?.starter_code || "");
     setRan(false);
-    setTestCases(SAMPLE_TEST_CASES);
+    setTestCases([]);
     setShowCustomTest(false);
   };
 
@@ -213,6 +177,49 @@ function WhiteboardPage() {
     setFontSize((size) => Math.min(20, Math.min(11, size + delta)));
   };
 
+  if (loading) {
+    return (
+      <div className="whiteboard-page">
+        <div className="whiteboard-toolbar">
+          <div className="wb-toolbar-left">
+            <Button variant="ghost" onClick={() => navigate("/interviewee/assessments")}>
+              <ArrowLeft size={16} />
+              Back to Assessments
+            </Button>
+          </div>
+        </div>
+        <div className="whiteboard-complete">
+          <p>Loading question...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!question) {
+    return (
+      <div className="whiteboard-page">
+        <div className="whiteboard-toolbar">
+          <div className="wb-toolbar-left">
+            <Button variant="ghost" onClick={() => navigate("/interviewee/assessments")}>
+              <ArrowLeft size={16} />
+              Back to Assessments
+            </Button>
+          </div>
+        </div>
+        <div className="whiteboard-complete">
+          <Badge variant="warning">No Question</Badge>
+          <h1>No question available</h1>
+          <p>There is no question loaded for this assessment.</p>
+          <div className="whiteboard-complete-actions">
+            <Button onClick={() => navigate("/interviewee/assessments")}>
+              Back to Assessments
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="whiteboard-page">
@@ -254,10 +261,10 @@ function WhiteboardPage() {
           </Button>
           <div className="wb-problem-badge">
             <Badge variant="primary">
-              {question?.question_text || "Two Sum"}
+              {question?.question_text || "Question"}
             </Badge>
             <span className="wb-problem-meta">
-              {question?.difficulty || "Easy"} · {question?.points || 15} pts
+              {question?.difficulty || ""} · {question?.points || 0} pts
             </span>
           </div>
         </div>
@@ -314,24 +321,25 @@ function WhiteboardPage() {
               <FileText size={16} style={{ marginRight: 8, verticalAlign: "middle" }} />
               Question
             </h2>
-            <Badge variant="primary">{question?.difficulty || "Easy"}</Badge>
+            <Badge variant="primary">{question?.difficulty || ""}</Badge>
           </div>
 
           <div className="question-content">
-            <h1 className="question-title">{question?.question_text || "Two Sum"}</h1>
+            <h1 className="question-title">{question?.question_text || ""}</h1>
 
             <div className="question-difficulty">
-              <Badge variant={question?.difficulty === "Hard" ? "danger" : question?.difficulty === "Medium" ? "warning" : "success"}>
-                {question?.difficulty || "Easy"}
-              </Badge>
-              <Badge variant="secondary">{question?.points || 15} Points</Badge>
+              {question?.difficulty && (
+                <Badge variant={question.difficulty === "Hard" ? "danger" : question.difficulty === "Medium" ? "warning" : "success"}>
+                  {question.difficulty}
+                </Badge>
+              )}
+              <Badge variant="secondary">{question?.points || 0} Points</Badge>
             </div>
 
             <div className="question-section">
               <h3 className="question-section-title">Description</h3>
               <p className="question-description">
-                {question?.description ||
-                  "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order."}
+                {question?.description || ""}
               </p>
             </div>
 
@@ -352,12 +360,7 @@ function WhiteboardPage() {
             <div className="question-section">
               <h3 className="question-section-title">Constraints</h3>
               <ul className="question-constraints">
-                {(question?.constraints || [
-                  "2 <= nums.length <= 104",
-                  "-109 <= nums[i] <= 109",
-                  "-109 <= target <= 109",
-                  "Only one valid answer exists.",
-                ]).map((constraint, index) => (
+                {(question?.constraints || []).map((constraint, index) => (
                   <li key={index}>
                     <CheckCircle size={12} style={{ display: "inline", marginRight: 6, color: "var(--color-success)" }} />
                     {constraint}
@@ -555,42 +558,50 @@ function WhiteboardPage() {
               <Terminal size={16} style={{ marginRight: 8, verticalAlign: "middle" }} />
               Test Cases
             </h2>
-            <Badge variant={testCases.every((t) => t.passed) ? "success" : "danger"}>
-              {totalPassed}/{totalTests} passing
-            </Badge>
+            {totalTests > 0 && (
+              <Badge variant={testCases.every((t) => t.passed) ? "success" : "danger"}>
+                {totalPassed}/{totalTests} passing
+              </Badge>
+            )}
           </div>
 
           <div className="tests-list">
-            {testCases.map((test, index) => (
-              <div
-                className={`test-card ${test.passed ? "passed" : !ran ? "" : "failed"} ${running ? "running" : ""}`}
-                key={test.name}
-              >
-                <div className="test-card-head">
-                  {test.passed ? (
-                    <CheckCircle2 size={16} className="test-pass-icon" />
-                  ) : (
-                    <XCircle size={16} className="test-fail-icon" />
+            {testCases.length === 0 ? (
+              <p style={{ padding: "var(--space-4)", color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
+                No test cases loaded. Run your code or add a custom test case.
+              </p>
+            ) : (
+              testCases.map((test, index) => (
+                <div
+                  className={`test-card ${test.passed ? "passed" : !ran ? "" : "failed"} ${running ? "running" : ""}`}
+                  key={test.name}
+                >
+                  <div className="test-card-head">
+                    {test.passed ? (
+                      <CheckCircle2 size={16} className="test-pass-icon" />
+                    ) : (
+                      <XCircle size={16} className="test-fail-icon" />
+                    )}
+                    <strong>{test.name}</strong>
+                    <Badge variant={test.passed ? "success" : "danger"}>
+                      {test.passed ? "Passed" : "Failed"}
+                    </Badge>
+                  </div>
+                  {test.input && (
+                    <div className="test-input">
+                      <span className="example-label">Input:</span>{" "}
+                      {test.input}
+                    </div>
                   )}
-                  <strong>{test.name}</strong>
-                  <Badge variant={test.passed ? "success" : "danger"}>
-                    {test.passed ? "Passed" : "Failed"}
-                  </Badge>
+                  {test.expected && (
+                    <div className="test-expected">
+                      <span className="example-label">Expected:</span>{" "}
+                      {test.expected}
+                    </div>
+                  )}
                 </div>
-                {test.input && (
-                  <div className="test-input">
-                    <span className="example-label">Input:</span>{" "}
-                    {test.input}
-                  </div>
-                )}
-                {test.expected && (
-                  <div className="test-expected">
-                    <span className="example-label">Expected:</span>{" "}
-                    {test.expected}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           <div style={{ padding: "var(--space-4)", borderTop: "1px solid var(--color-border)" }}>

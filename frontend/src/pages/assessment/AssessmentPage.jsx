@@ -1,95 +1,86 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Flag, Timer } from "lucide-react";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
+import { API_URL } from "../../utils/constants";
 import "./AssessmentPage.css";
 
-const QUESTION_COUNT = 20;
-
-function buildQuestions() {
-  const questions = [];
-  const mcqWordBank = {
-    q1: "Which of the following is used to create a React component?",
-    q2: "Which React hook is commonly used to manage component state?",
-    q4: "Which HTTP method is commonly used to retrieve data?",
-  };
-  const optionsBank = [
-    "A JavaScript function",
-    "A CSS class",
-    "A database query",
-    "An HTML document",
-  ];
-  for (let i = 1; i <= QUESTION_COUNT; i += 1) {
-    if (i === 5) {
-      questions.push({
-        id: i,
-        type: "coding",
-        title: "Implement a Deep Merge Function for Nested Objects",
-        points: 15,
-        question:
-          "Write a function deepMerge(obj1, obj2) that recursively merges two JavaScript objects. If a key exists in both objects, merge their nested values recursively.",
-        constraints: [
-          "Do not use external libraries (like Lodash).",
-          "Correctly handle circular references if applicable.",
-        ],
-        starterCode: `// Write your deepMerge implementation below
-function deepMerge(obj1, obj2) {
-  const merged = { ...obj1 };
-  for (let key in obj2) {
-    // Add recursive merging logic here...
+const mapQuestionType = (backendType) => {
+  switch (backendType) {
+    case "multiple_choice":
+      return "mcq";
+    case "coding":
+      return "coding";
+    case "text":
+    default:
+      return "text";
   }
-  return merged;
-}`,
-      });
-    } else if (i % 5 === 0 || i % 7 === 0) {
-      questions.push({
-        id: i,
-        type: "coding",
-        title: `Coding Challenge ${i}`,
-        points: 15,
-        question: `Implement the function described for challenge ${i}.`,
-        starterCode: `function solveChallenge${i}() {
-  // Write your solution here
-}`,
-      });
-    } else if (mcqWordBank[`q${i}`]) {
-      questions.push({
-        id: i,
-        type: "mcq",
-        title: mcqWordBank[`q${i}`],
-        points: 5,
-        options: i === 2 ? ["useEffect", "useState", "useNavigate", "useParams"] : optionsBank,
-      });
-    } else {
-      questions.push({
-        id: i,
-        type: "text",
-        title: `Explain in your own words why component state is useful (question ${i}).`,
-        points: 10,
-        placeholder: "Write your answer here...",
-      });
+};
+
+const parseOptions = (question) => {
+  if (question.options) {
+    try {
+      const parsed = typeof question.options === "string"
+        ? JSON.parse(question.options)
+        : question.options;
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === "object") {
+        return Object.values(parsed);
+      }
+    } catch {
+      return question.options.split(",").map((o) => o.trim());
     }
   }
-  return questions;
-}
-
-const QUESTIONS = buildQuestions();
+  return [];
+};
 
 function AssessmentPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   const [started, setStarted] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(4);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [flagged, setFlagged] = useState(new Set([6]));
+  const [flagged, setFlagged] = useState(new Set());
   const [submitted, setSubmitted] = useState(false);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(38 * 60 + 22);
+  const [timeLeft, setTimeLeft] = useState(0);
 
-  const question = QUESTIONS[currentQuestion];
-  const currentAnswer = answers[question.id] || "";
+  const [questions, setQuestions] = useState([]);
+  const [assessment, setAssessment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [assessRes, questionsRes] = await Promise.all([
+          fetch(`${API_URL}/assessments/${id}`),
+          fetch(`${API_URL}/assessments/${id}/questions`),
+        ]);
+
+        if (!assessRes.ok) throw new Error("Failed to load assessment");
+        if (!questionsRes.ok) throw new Error("Failed to load questions");
+
+        const assessData = await assessRes.json();
+        const questionsData = await questionsRes.json();
+
+        setAssessment(assessData);
+        setQuestions(questionsData);
+        if (assessData.time_limit_minutes) {
+          setTimeLeft(assessData.time_limit_minutes * 60);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
 
   useEffect(() => {
     if (!started || submitted) return undefined;
@@ -100,8 +91,25 @@ function AssessmentPage() {
     return () => clearInterval(timer);
   }, [started, submitted, timeLeft]);
 
+  const mappedQuestions = questions.map((q) => ({
+    id: q.question_id,
+    type: mapQuestionType(q.question_type),
+    title: q.question_text,
+    points: q.points,
+    question: q.description || q.question_text,
+    starterCode: q.starter_code || "",
+    language: q.language || "javascript",
+    options: parseOptions(q),
+    constraints: [],
+    placeholder: "Write your answer here...",
+  }));
+
+  const questionCount = mappedQuestions.length;
+  const question = mappedQuestions[currentQuestion] || null;
+  const currentAnswer = question ? (answers[question.id] || "") : "";
+
   const updateAnswer = (value) => {
-    if (submitted || timeLeft <= 0) return;
+    if (submitted || timeLeft <= 0 || !question) return;
     setAnswers((previousAnswers) => ({
       ...previousAnswers,
       [question.id]: value,
@@ -109,7 +117,7 @@ function AssessmentPage() {
   };
 
   const handleNext = () => {
-    if (currentQuestion < QUESTIONS.length - 1) {
+    if (currentQuestion < questionCount - 1) {
       setCurrentQuestion((previous) => previous + 1);
     }
   };
@@ -121,6 +129,7 @@ function AssessmentPage() {
   };
 
   const toggleFlag = () => {
+    if (!question) return;
     setFlagged((current) => {
       const next = new Set(current);
       if (next.has(question.id)) next.delete(question.id);
@@ -144,14 +153,53 @@ function AssessmentPage() {
   const flaggedCount = flagged.size;
   const visitedCount = new Set([...Object.keys(answers).map(Number), ...flagged, currentQuestion]).size;
 
+  if (loading) {
+    return (
+      <div className="assessment-page assessment-center">
+        <Card padded className="assessment-intro-card">
+          <p>Loading assessment...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="assessment-page assessment-center">
+        <Card padded className="assessment-intro-card">
+          <Badge variant="danger">Error</Badge>
+          <h1>Failed to load assessment</h1>
+          <p>{error}</p>
+          <Button onClick={() => navigate("/interviewee/assessments")}>
+            Back to Assessments
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (mappedQuestions.length === 0) {
+    return (
+      <div className="assessment-page assessment-center">
+        <Card padded className="assessment-intro-card">
+          <Badge variant="warning">No Questions</Badge>
+          <h1>No questions available for this assessment.</h1>
+          <Button onClick={() => navigate("/interviewee/assessments")}>
+            Back to Assessments
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   if (!started) {
     return (
       <div className="assessment-page assessment-center">
         <Card padded className="assessment-intro-card">
           <div className="assessment-introduction">
             <Badge variant="info">Technical Assessment</Badge>
-            <h1>Acme Corp Front-End Evaluation</h1>
-            <p className="assessment-section">Section: Advanced Coding Challenges</p>
+            <h1>{assessment?.title || "Assessment"}</h1>
+            <p className="assessment-section">{assessment?.description || ""}</p>
             <p>
               Welcome to your technical assessment. Read the instructions
               carefully before starting.
@@ -160,7 +208,7 @@ function AssessmentPage() {
             <div className="assessment-instructions">
               <h2>Assessment instructions</h2>
               <ul>
-                <li>You have 60 minutes to complete the assessment.</li>
+                <li>You have {assessment?.time_limit_minutes || 60} minutes to complete the assessment.</li>
                 <li>Answer every question before submitting.</li>
                 <li>You can move between questions using the navigator.</li>
                 <li>Your answers are saved as you work.</li>
@@ -169,8 +217,8 @@ function AssessmentPage() {
             </div>
 
             <div className="assessment-summary">
-              <div><strong>{QUESTION_COUNT}</strong><span>Questions</span></div>
-              <div><strong>60</strong><span>Minutes</span></div>
+              <div><strong>{questionCount}</strong><span>Questions</span></div>
+              <div><strong>{assessment?.time_limit_minutes || 60}</strong><span>Minutes</span></div>
               <div><strong>3</strong><span>Question types</span></div>
             </div>
 
@@ -202,7 +250,7 @@ function AssessmentPage() {
           </p>
           <div className="assessment-submission-summary">
             <div><strong>{answeredCount}</strong><span>Answered</span></div>
-            <div><strong>{QUESTION_COUNT - answeredCount}</strong><span>Unanswered</span></div>
+            <div><strong>{questionCount - answeredCount}</strong><span>Unanswered</span></div>
           </div>
           <Button onClick={() => navigate("/interviewee/results")}>
             View Results
@@ -212,17 +260,17 @@ function AssessmentPage() {
     );
   }
 
-  const progressPercent = Math.round(((currentQuestion + 1) / QUESTION_COUNT) * 100);
+  const progressPercent = Math.round(((currentQuestion + 1) / questionCount) * 100);
 
   return (
     <div className="assessment-page">
       <div className="assessment-topbar">
         <div className="assessment-title">
-          <Badge variant="info">Acme Corp Front-End Evaluation</Badge>
-          <p>Section: Advanced Coding Challenges</p>
+          <Badge variant="info">{assessment?.title || "Assessment"}</Badge>
+          <p>{assessment?.description || ""}</p>
         </div>
         <div className="assessment-tracker">
-          <span className="tracker-text">Question {currentQuestion + 1} of {QUESTION_COUNT}</span>
+          <span className="tracker-text">Question {currentQuestion + 1} of {questionCount}</span>
           <span className="tracker-text"> {progressPercent}% Completed</span>
           <span className="tracker-timer">
             <Timer size={16} />
@@ -248,17 +296,6 @@ function AssessmentPage() {
 
             {question.type !== "mcq" && (
               <p className="question-prompt">{question.question}</p>
-            )}
-
-            {question.constraints && (
-              <div className="question-constraints">
-                <strong>Constraints:</strong>
-                <ol>
-                  {question.constraints.map((constraint) => (
-                    <li key={constraint}>{constraint}</li>
-                  ))}
-                </ol>
-              </div>
             )}
 
             {question.type === "mcq" && (
@@ -303,7 +340,7 @@ function AssessmentPage() {
               <div className="code-editor-box">
                 <div className="code-editor-tab">
                   <span className="file-dot" />
-                  deepMerge.js
+                  {question.language || "javascript"}
                 </div>
                 <textarea
                   className="assessment-code-editor"
@@ -323,7 +360,7 @@ function AssessmentPage() {
                 <Flag size={16} />
                 Flag for Review
               </Button>
-              {currentQuestion === QUESTIONS.length - 1 ? (
+              {currentQuestion === questionCount - 1 ? (
                 <Button onClick={handleSubmit}>Submit Assessment</Button>
               ) : (
                 <Button onClick={handleNext}>Next Question</Button>
@@ -341,10 +378,10 @@ function AssessmentPage() {
               <span><i className="lg answered" />Answered ({answeredCount})</span>
               <span><i className="lg current" />Current ({1})</span>
               <span><i className="lg flagged" />Flagged for Review ({flaggedCount})</span>
-              <span><i className="lg unvisited" />Unvisited ({QUESTION_COUNT - visitedCount})</span>
+              <span><i className="lg unvisited" />Unvisited ({questionCount - visitedCount})</span>
             </div>
             <div className="question-numbers">
-              {QUESTIONS.map((item, index) => (
+              {mappedQuestions.map((item, index) => (
                 <button
                   key={item.id}
                   type="button"
@@ -371,12 +408,12 @@ function AssessmentPage() {
             <Badge variant="warning">Confirm Submission</Badge>
             <h2>Submit your assessment?</h2>
             <p>
-              You have answered {answeredCount} of {QUESTION_COUNT} questions.
+              You have answered {answeredCount} of {questionCount} questions.
             </p>
-            {QUESTION_COUNT - answeredCount > 0 && (
+            {questionCount - answeredCount > 0 && (
               <p>
-                You still have {QUESTION_COUNT - answeredCount} unanswered question
-                {QUESTION_COUNT - answeredCount === 1 ? "" : "s"}.
+                You still have {questionCount - answeredCount} unanswered question
+                {questionCount - answeredCount === 1 ? "" : "s"}.
               </p>
             )}
             <div className="assessment-modal-actions">

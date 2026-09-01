@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, Float, Boolean
 
 from app.core.database import Base
-from app.models.invitations.invitation import GUID
+from app.core.types import GUID
 
 
 class Result(Base):

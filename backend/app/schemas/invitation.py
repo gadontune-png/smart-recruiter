@@ -3,31 +3,24 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
-from app.models.invitations.invitation import InvitationStatus
-
 
 class InvitationCreate(BaseModel):
     assessment_id: int
     interviewee_id: int
-    scheduled_at: Optional[datetime] = None
-    expires_at: Optional[datetime] = None
 
 
 class InvitationBulkCreate(BaseModel):
     assessment_id: int
     interviewee_ids: List[int]
-    scheduled_at: Optional[datetime] = None
-    expires_at: Optional[datetime] = None
 
 
 class InvitationOut(BaseModel):
-    id: str
+    invitation_id: int
     assessment_id: int
     interviewee_id: int
-    status: InvitationStatus
-    scheduled_at: Optional[datetime]
-    expires_at: Optional[datetime]
-    accepted_at: Optional[datetime]
+    status: str
+    invited_at: Optional[datetime] = None
+    responded_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

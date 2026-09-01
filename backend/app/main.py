@@ -25,7 +25,7 @@ from app.models.submissions.code_submission import CodeSubmission
 from app.models.codewars.challenge import CodewarsChallenge
 from app.models.codewars.assessment_challenge import AssessmentChallenge
 
-app = FastAPI(title="Smart Recruiter API")
+app = FastAPI(title="Smart Recruiter API", redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,

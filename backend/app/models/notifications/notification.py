@@ -1,26 +1,18 @@
-import uuid
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, String, DateTime, Boolean, Enum, Text
+from sqlalchemy import Column, String, DateTime, Boolean, Text, Integer
 
 from app.core.database import Base
-from app.models.invitations.invitation import GUID
-
-
-class NotificationType(str, enum.Enum):
-    INVITATION = "invitation"
-    INFO = "info"
-    REMINDER = "reminder"
 
 
 class Notification(Base):
     __tablename__ = "notifications"
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    user_id = Column(GUID(), nullable=False)  # FK to Member 1's users table
-    type = Column(Enum(NotificationType), default=NotificationType.INFO, nullable=False)
+    notification_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    title = Column(String(200), nullable=False)
     message = Column(Text, nullable=False)
+    notification_type = Column(String(50), nullable=True)
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-
