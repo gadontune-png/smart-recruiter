@@ -49,5 +49,5 @@ class Invitation(Base):
     accepted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    interviewee = relationship("User", back_populates="invitations_created")
+    interviewee = relationship("User", back_populates="invitations")
     assessment = relationship("Assessment", back_populates="invitations")

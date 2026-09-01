@@ -24,5 +24,9 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     assessments = relationship("Assessment", back_populates="recruiter")
-    invitations_created = relationship("Invitation", foreign_keys="[Invitation.interviewee_id]", back_populates="interviewee")
+    invitations = relationship(
+        "Invitation",
+        foreign_keys="[Invitation.interviewee_id]",
+        back_populates="interviewee",
+    )
     attempts = relationship("Attempt", back_populates="interviewee")

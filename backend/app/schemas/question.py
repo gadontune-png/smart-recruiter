@@ -76,4 +76,4 @@ class QuestionOut(BaseModel):
     language: Optional[str] = None
     timelimit_seconds: Optional[int] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None

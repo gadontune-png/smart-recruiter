@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import Base, engine
 from app.api.auth.routes import router as auth_router
@@ -25,6 +26,14 @@ from app.models.codewars.challenge import CodewarsChallenge
 from app.models.codewars.assessment_challenge import AssessmentChallenge
 
 app = FastAPI(title="Smart Recruiter API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 Base.metadata.create_all(bind=engine)
 

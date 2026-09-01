@@ -1,44 +1,38 @@
-import { API_URL, ENABLE_MOCK } from "../utils/constants";
-import { findMockUser, registerMockUser } from "../data/mock/auth";
+import { API_URL } from "../utils/constants";
 
 function getErrorMessage(error) {
-  let message = "Something went wrong. Please try again.";
-  if (error && typeof error === "object" && error.message) {
-    message = error.message;
+  if (error && typeof error === "object") {
+    if (error.detail) return error.detail;
+    if (error.message) return error.message;
   }
-  return message;
+  if (error && typeof error === "string") return error;
+  return "Something went wrong. Please try again.";
 }
 
 export const authService = {
   async login({ email, password }) {
-    if (ENABLE_MOCK) {
-      return findMockUser(email, password);
-    }
     const response = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
       throw new Error(getErrorMessage(data));
     }
-    return response.json();
+    return data.user;
   },
 
   async register({ name, email, password, role }) {
-    if (ENABLE_MOCK) {
-      return registerMockUser({ name, email, password, role });
-    }
     const response = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role }),
+      body: JSON.stringify({ full_name: name, email, password, role }),
     });
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
       throw new Error(getErrorMessage(data));
     }
-    return response.json();
+    return data.user;
   },
 };

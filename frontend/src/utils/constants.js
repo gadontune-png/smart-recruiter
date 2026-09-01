@@ -2,8 +2,6 @@ export const APP_NAME = import.meta.env.VITE_APP_NAME || "Smart Recruiter";
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-export const ENABLE_MOCK = (import.meta.env.VITE_ENABLE_MOCK ?? "true") === "true";
-
 export const ROLES = Object.freeze({
   RECRUITER: "recruiter",
   INTERVIEWEE: "interviewee",

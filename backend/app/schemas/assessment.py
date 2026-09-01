@@ -33,7 +33,7 @@ class AssessmentOut(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class AssessmentDetailOut(AssessmentOut):
