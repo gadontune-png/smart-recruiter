@@ -10,6 +10,7 @@ import NotFoundPage from "../pages/NotFoundPage";
 
 import RecruiterDashboardPage from "../pages/recruiter/RecruiterDashboardPage";
 import RecruiterAssessmentsPage from "../pages/recruiter/RecruiterAssessmentsPage";
+import RecruiterCreateAssessmentPage from "../pages/recruiter/RecruiterCreateAssessmentPage";
 import RecruiterQuestionsPage from "../pages/recruiter/RecruiterQuestionsPage";
 import RecruiterInvitationsPage from "../pages/recruiter/RecruiterInvitationsPage";
 import RecruiterResultsPage from "../pages/recruiter/RecruiterResultsPage";
@@ -77,6 +78,10 @@ export const router = createBrowserRouter([
               {
                 path: ROUTES.RECRUITER.ASSESSMENTS,
                 element: <RecruiterAssessmentsPage />,
+              },
+              {
+                path: ROUTES.RECRUITER.ADD_ASSESSMENT,
+                element: <RecruiterCreateAssessmentPage />,
               },
               {
                 path: ROUTES.RECRUITER.QUESTIONS,

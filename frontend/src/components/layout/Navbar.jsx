@@ -25,7 +25,9 @@ function Topbar({ onToggleSidebar }) {
     ? ROUTES.RECRUITER.RESULTS
     : ROUTES.INTERVIEWEE.ASSESSMENTS;
 
-  const roleLabel = isRecruiter ? "System Admin" : "Developer Role";
+  const roleLabel = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : "";
 
   const initials = user?.name
     ?.split(" ")

@@ -117,8 +117,12 @@ def test_question_filter_by_assessment(client: TestClient, recruiter):
 
 
 def test_invitations_and_notifications(client: TestClient, recruiter, interviewee):
-    resp = _register(client, "Candidate Target", _unique_email("target"), "secret123", "interviewee")
+    target_email = _unique_email("target")
+    resp = _register(client, "Candidate Target", target_email, "secret123", "interviewee")
     target_id = resp.json()["user"]["user_id"]
+    target_headers = {
+        "Authorization": f"Bearer {client.post('/api/auth/login', json={'email': target_email, 'password': 'secret123'}).json()['access_token']}"
+    }
 
     aid = client.post(
         "/api/assessments", json={"title": "N", "time_limit_minutes": 60}, headers=recruiter
@@ -133,7 +137,7 @@ def test_invitations_and_notifications(client: TestClient, recruiter, interviewe
     iid = inv.json()["invitation_id"]
     assert inv.json()["title"] == "N"
 
-    accept = client.post(f"/api/invitations/{iid}/accept", headers=interviewee)
+    accept = client.post(f"/api/invitations/{iid}/accept", headers=target_headers)
     assert accept.status_code == 200 and accept.json()["status"] == "ACCEPTED"
 
     notes = client.get("/api/notifications", params={"user_id": target_id})

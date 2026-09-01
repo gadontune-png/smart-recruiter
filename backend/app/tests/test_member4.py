@@ -56,7 +56,7 @@ def test_create_and_list_invitation(client: TestClient):
     assert r.json()["status"] == "PENDING"
     assert r.json()["title"] == "Inv"
 
-    r2 = client.get("/api/invitations")
+    r2 = client.get("/api/invitations", headers=recruiter)
     assert r2.status_code == 200
     assert len(r2.json()) >= 1
 
@@ -80,25 +80,28 @@ def test_bulk_invitation(client: TestClient):
 
 def test_accept_invitation(client: TestClient):
     recruiter = _make_recruiter(client)
-    interviewee_id = _make_interviewee(client)
+    target_email = _unique_email("accepttarget")
+    target_id = _register(client, "Accept Target", target_email, "secret123", "interviewee").json()["user"]["user_id"]
+    target_headers = _auth_headers(client, target_email, "secret123")
     aid = client.post(
         "/api/assessments", json={"title": "Acc", "time_limit_minutes": 30}, headers=recruiter
     ).json()["assessment_id"]
 
     r = client.post(
         "/api/invitations",
-        json={"assessment_id": aid, "interviewee_id": interviewee_id},
+        json={"assessment_id": aid, "interviewee_id": target_id},
         headers=recruiter,
     )
     invitation_id = r.json()["invitation_id"]
 
-    r2 = client.post(f"/api/invitations/{invitation_id}/accept")
+    r2 = client.post(f"/api/invitations/{invitation_id}/accept", headers=target_headers)
     assert r2.status_code == 200
     assert r2.json()["status"] == "ACCEPTED"
 
 
 def test_accept_missing_invitation_404(client: TestClient):
-    r = client.post("/api/invitations/999999/accept")
+    recruiter = _make_recruiter(client)
+    r = client.post("/api/invitations/999999/accept", headers=recruiter)
     assert r.status_code == 404
 
 

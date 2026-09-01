@@ -48,7 +48,7 @@ function AuthLayout({ title, subtitle, children }) {
           <blockquote className="auth-brand-quote">
             &ldquo;We cut screening time in half with smarter,
             code-first assessments.&rdquo;
-            <small>— Platform Admin, Core Engineering Team</small>
+            <small>— The Smart Recruiter Team</small>
           </blockquote>
         </div>
       </aside>
