@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { ROUTES, API_URL } from "../../utils/constants";
-import { useAuth } from "../../hooks/useAuth";
+import { ROUTES } from "../../utils/constants";
+import { assessmentService } from "../../services/assessmentService";
+import { invitationService } from "../../services/assessmentService";
 import "./recruiter.css";
 
 function statusVariant(status) {
@@ -34,7 +35,6 @@ function formatDate(dateStr) {
 }
 
 function RecruiterDashboardPage() {
-  const { user } = useAuth();
   const [assessments, setAssessments] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,22 +45,10 @@ function RecruiterDashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("sr_auth")
-          ? JSON.parse(localStorage.getItem("sr_auth")).token
-          : null;
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-        const [assessRes, invRes] = await Promise.all([
-          fetch(`${API_URL}/assessments/my`, { headers }),
-          fetch(`${API_URL}/invitations`, { headers }),
+        const [assessmentsData, invitationsData] = await Promise.all([
+          assessmentService.listMyAssessments(),
+          invitationService.listInvitations(),
         ]);
-
-        if (!assessRes.ok) throw new Error("Failed to load assessments");
-        if (!invRes.ok) throw new Error("Failed to load invitations");
-
-        const assessmentsData = await assessRes.json();
-        const invitationsData = await invRes.json();
-
         setAssessments(Array.isArray(assessmentsData) ? assessmentsData : []);
         setInvitations(Array.isArray(invitationsData) ? invitationsData : []);
       } catch (err) {
@@ -108,7 +96,7 @@ function RecruiterDashboardPage() {
     {
       label: "Draft Assessments",
       value: draftAssessments.length,
-      delta: "Requires attention",
+      delta: draftAssessments.length > 0 ? `${draftAssessments.length} need completion` : "No drafts",
       icon: ClipboardCheck,
       tone: "red",
     },
@@ -246,22 +234,22 @@ function RecruiterDashboardPage() {
           ) : (
             <ul className="interview-list">
               {acceptedInvitations.map((inv) => (
-                <li className="interview-item" key={inv.id}>
+                <li className="interview-item" key={inv.invitation_id}>
                   <span className="avatar interview-avatar">
                     {inv.interviewee_id ? String(inv.interviewee_id).slice(0, 2).toUpperCase() : "??"}
                   </span>
                   <div className="interview-info">
                     <div className="interview-name">
-                      {inv.interviewee_id ? `Candidate #${inv.interviewee_id}` : "Unknown Candidate"}
+                      {inv.title ? inv.title : `Candidate #${inv.interviewee_id}`}
                       <Badge variant="success">Accepted</Badge>
                     </div>
                     <span className="interview-role">
                       Assessment #{inv.assessment_id}
                     </span>
                     <span className="interview-time">
-                      {inv.scheduled_at
-                        ? `Scheduled: ${formatDate(inv.scheduled_at)}`
-                        : `Accepted: ${formatDate(inv.accepted_at)}`}
+                      {inv.responded_at
+                        ? `Accepted: ${formatDate(inv.responded_at)}`
+                        : `Invited: ${formatDate(inv.invited_at)}`}
                     </span>
                   </div>
                 </li>

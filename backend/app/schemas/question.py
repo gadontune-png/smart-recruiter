@@ -4,51 +4,32 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AssessmentCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    time_limit_minutes: int
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-
-
-class AssessmentUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    time_limit_minutes: Optional[int] = None
-    status: Optional[str] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-
-
-class AssessmentOut(BaseModel):
+class QuestionOptionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    assessment_id: int
-    recruiter_id: int
-    title: str
-    description: Optional[str] = None
-    time_limit_minutes: int
-    status: str
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    option_id: int
+    question_id: int
+    option_text: str
+    is_correct: bool
 
 
-class AssessmentDetailOut(AssessmentOut):
-    questions: List["QuestionOut"] = []
+class QuestionOptionIn(BaseModel):
+    option_text: str
+    is_correct: bool = False
 
 
 class QuestionCreate(BaseModel):
+    assessment_id: Optional[int] = None
     question_text: str
     question_type: str
-    points: int
+    points: int = 0
     order_number: int = 0
     description: Optional[str] = None
     starter_code: Optional[str] = None
     language: Optional[str] = None
     timelimit_seconds: Optional[int] = None
+    difficulty: Optional[str] = None
+    options: List[QuestionOptionIn] = []
 
 
 class QuestionUpdate(BaseModel):
@@ -60,6 +41,7 @@ class QuestionUpdate(BaseModel):
     starter_code: Optional[str] = None
     language: Optional[str] = None
     timelimit_seconds: Optional[int] = None
+    difficulty: Optional[str] = None
 
 
 class QuestionOut(BaseModel):
@@ -75,5 +57,22 @@ class QuestionOut(BaseModel):
     starter_code: Optional[str] = None
     language: Optional[str] = None
     timelimit_seconds: Optional[int] = None
+    options: List[QuestionOptionOut] = []
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+
+class CandidateQuestionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: int
+    assessment_id: int
+    question_text: str
+    question_type: str
+    points: int
+    order_number: int
+    description: Optional[str] = None
+    starter_code: Optional[str] = None
+    language: Optional[str] = None
+    timelimit_seconds: Optional[int] = None
+    options: List[QuestionOptionOut] = []

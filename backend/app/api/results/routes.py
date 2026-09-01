@@ -1,14 +1,33 @@
-import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.assessments.assessment import Assessment
 from app.models.results.result import Result
+from app.models.user import User
 from app.schemas.result import ResultCreate, ResultOut
 
 router = APIRouter(prefix="/api", tags=["results"])
+
+
+class ResultDetailOut(ResultOut):
+    interviewee_name: str | None = None
+    assessment_title: str | None = None
+
+
+def _enrich(result: Result, db: Session) -> ResultDetailOut:
+    out = ResultDetailOut.model_validate(result)
+    user = db.query(User).filter(User.user_id == result.interviewee_id).first()
+    out.interviewee_name = user.full_name if user else None
+    assessment = (
+        db.query(Assessment)
+        .filter(Assessment.assessment_id == result.assessment_id)
+        .first()
+    )
+    out.assessment_title = assessment.title if assessment else None
+    return out
 
 
 @router.post("/results", response_model=ResultOut)
@@ -20,29 +39,29 @@ def record_result(payload: ResultCreate, db: Session = Depends(get_db)):
     return result
 
 
-@router.get("/results/{submission_id}", response_model=ResultOut)
-def get_result(submission_id: uuid.UUID, db: Session = Depends(get_db)):
+@router.get("/results/{submission_id}", response_model=ResultDetailOut)
+def get_result(submission_id: int, db: Session = Depends(get_db)):
     result = db.query(Result).filter(Result.submission_id == submission_id).first()
     if not result:
         raise HTTPException(status_code=404, detail="Result not found")
-    return result
+    return _enrich(result, db)
 
 
-@router.get("/assessments/{assessment_id}/results", response_model=List[ResultOut])
-def list_results_for_assessment(assessment_id: uuid.UUID, db: Session = Depends(get_db)):
-    return (
+@router.get("/assessments/{assessment_id}/results", response_model=List[ResultDetailOut])
+def list_results_for_assessment(assessment_id: int, db: Session = Depends(get_db)):
+    results = (
         db.query(Result)
         .filter(Result.assessment_id == assessment_id)
         .order_by(Result.total_score.desc())
         .all()
     )
+    return [_enrich(r, db) for r in results]
 
 
 @router.post("/assessments/{assessment_id}/release-grades")
-def release_grades(assessment_id: uuid.UUID, db: Session = Depends(get_db)):
+def release_grades(assessment_id: int, db: Session = Depends(get_db)):
     results = db.query(Result).filter(Result.assessment_id == assessment_id).all()
     for r in results:
         r.grade_released = True
     db.commit()
     return {"assessment_id": assessment_id, "released_count": len(results)}
-

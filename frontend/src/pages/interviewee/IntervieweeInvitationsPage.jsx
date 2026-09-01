@@ -4,7 +4,11 @@ import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { API_URL, ROUTES } from "../../utils/constants";
+import {
+  invitationService,
+  notificationService,
+} from "../../services/assessmentService";
+import { ROUTES } from "../../utils/constants";
 import "./interviewee-invitations.css";
 
 function IntervieweeInvitationsPage() {
@@ -14,23 +18,33 @@ function IntervieweeInvitationsPage() {
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/invitations`)
-      .then((res) => res.json())
+    invitationService
+      .listInvitations()
       .then((data) => setInvitations(Array.isArray(data) ? data : []))
       .catch(() => setInvitations([]));
   }, []);
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetch(`${API_URL}/notifications?user_id=${user.user_id}`)
-      .then((res) => res.json())
+    notificationService
+      .listNotifications(user.user_id)
       .then((data) => setNotifications(Array.isArray(data) ? data : []))
       .catch(() => setNotifications([]));
   }, [user?.user_id]);
 
   function accept(id) {
-    setInvitations(invitations.filter((inv) => inv.invitation_id !== id));
-    navigate(ROUTES.ASSESSMENT.replace(":id", "7"));
+    const invitation = invitations.find((inv) => inv.invitation_id === id);
+    invitationService
+      .acceptInvitation(id)
+      .then(() => {
+        setInvitations((current) =>
+          current.map((inv) =>
+            inv.invitation_id === id ? { ...inv, status: "ACCEPTED" } : inv
+          )
+        );
+        navigate(ROUTES.ASSESSMENT.replace(":id", invitation?.assessment_id || ""));
+      })
+      .catch(() => {});
   }
 
   function decline(id) {
@@ -38,6 +52,8 @@ function IntervieweeInvitationsPage() {
   }
 
   function markAllRead() {
+    const unread = notifications.filter((n) => !n.is_read);
+    unread.forEach((n) => notificationService.markAsRead(n.notification_id).catch(() => {}));
     setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
   }
 
@@ -93,15 +109,6 @@ function IntervieweeInvitationsPage() {
             </div>
           )}
 
-          <div className="panel-heading older-heading">
-            <h2>Older Updates</h2>
-          </div>
-          <div className="panel older-panel">
-            <p>
-              <span className="older-dot" />
-              Results available for Cloud Infrastructure Challenge — <a href="#r">View Report</a>
-            </p>
-          </div>
         </div>
 
         <aside className="invite-side">

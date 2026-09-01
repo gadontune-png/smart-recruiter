@@ -2,11 +2,17 @@ import { useState, useEffect } from "react";
 import { Send, Save } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { API_URL } from "../../utils/constants";
+import {
+  assessmentService,
+  resultService,
+} from "../../services/assessmentService";
+import { request } from "../../services/apiClient";
+import { useAuth } from "../../hooks/useAuth";
 import "./recruiter.css";
 import "./recruiter-grading.css";
 
 function RecruiterGradingPage() {
+  const { user } = useAuth();
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,40 +26,28 @@ function RecruiterGradingPage() {
     async function load() {
       try {
         setLoading(true);
-        const token = localStorage.getItem("sr_auth");
-        const headers = { "Content-Type": "application/json" };
-        if (token) {
-          try {
-            const parsed = JSON.parse(token);
-            if (parsed.token) headers["Authorization"] = `Bearer ${parsed.token}`;
-          } catch {}
-        }
-
-        const assessmentsRes = await fetch(`${API_URL}/assessments/my`, { headers });
-        const assessments = assessmentsRes.ok ? await assessmentsRes.json() : [];
+        const assessments = await assessmentService.listMyAssessments();
 
         const results = [];
         for (const assessment of assessments) {
           if (assessment.status !== "PUBLISHED") continue;
-          try {
-            const res = await fetch(`${API_URL}/assessments/${assessment.assessment_id}/results`, { headers });
-            if (res.ok) {
-              const data = await res.json();
-              if (Array.isArray(data)) {
-                for (const r of data) {
-                  results.push({
-                    id: r.id,
-                    assessment_id: r.assessment_id,
-                    interviewee_id: r.interviewee_id,
-                    total_score: r.total_score,
-                    grade_released: r.grade_released,
-                    calculated_at: r.calculated_at,
-                    assessment_title: assessment.title,
-                  });
-                }
-              }
+          const data = await resultService
+            .listAssessmentResults(assessment.assessment_id)
+            .catch(() => []);
+          if (Array.isArray(data)) {
+            for (const r of data) {
+              results.push({
+                id: r.id,
+                assessment_id: r.assessment_id,
+                interviewee_id: r.interviewee_id,
+                interviewee_name: r.interviewee_name,
+                total_score: r.total_score,
+                grade_released: r.grade_released,
+                calculated_at: r.calculated_at,
+                assessment_title: assessment.title,
+              });
             }
-          } catch {}
+          }
         }
 
         if (cancelled) return;
@@ -76,6 +70,42 @@ function RecruiterGradingPage() {
     setSelected(candidate);
     setScore(String(candidate.total_score ?? 0));
     setNotes("");
+  }
+
+  async function handleRelease() {
+    if (!selected) return;
+    try {
+      await resultService.releaseGrades(selected.assessment_id);
+      setCandidates((current) =>
+        current.map((c) =>
+          c.assessment_id === selected.assessment_id
+            ? { ...c, grade_released: true }
+            : c
+        )
+      );
+      setSelected((current) =>
+        current ? { ...current, grade_released: true } : current
+      );
+    } catch (err) {
+      setError(err.message || "Failed to release grades");
+    }
+  }
+
+  async function handleSaveDraft() {
+    if (!selected) return;
+    try {
+      await request("/feedback", {
+        method: "POST",
+        body: JSON.stringify({
+          answer_id: selected.submission_id || selected.id,
+          recruiter_id: user?.user_id || 0,
+          comment: notes || "No feedback notes provided.",
+          score: Number(score) || null,
+        }),
+      });
+    } catch (err) {
+      setError(err.message || "Failed to save evaluation");
+    }
   }
 
   if (loading) {
@@ -129,10 +159,16 @@ function RecruiterGradingPage() {
                   >
                     <div className="candidate-main">
                       <span className="avatar">
-                        {String(candidate.interviewee_id).slice(0, 2).toUpperCase()}
+                        {String(candidate.interviewee_name || candidate.interviewee_id)
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </span>
                       <div className="candidate-info">
-                        <strong>Candidate #{candidate.interviewee_id}</strong>
+                        <strong>
+                          {candidate.interviewee_name
+                            ? `Candidate ${candidate.interviewee_name}`
+                            : `Candidate #${candidate.interviewee_id}`}
+                        </strong>
                         <span>{candidate.assessment_title}</span>
                         <span className="candidate-score">Score: {candidate.total_score ?? "N/A"}</span>
                       </div>
@@ -150,7 +186,7 @@ function RecruiterGradingPage() {
         <section className="panel">
           <div className="panel-heading evaluation-heading">
             <div>
-              <h2>{selected ? `Evaluating: Candidate #${selected.interviewee_id}` : "No Candidate Selected"}</h2>
+              <h2>{selected ? `Evaluating: ${selected.interviewee_name || `Candidate #${selected.interviewee_id}`}` : "No Candidate Selected"}</h2>
               <p className="evaluation-assessment">
                 {selected
                   ? `Assessment: ${selected.assessment_title}`
@@ -217,11 +253,11 @@ function RecruiterGradingPage() {
             )}
 
             <div className="grading-actions">
-              <Button disabled={!selected}>
+              <Button disabled={!selected} onClick={handleRelease}>
                 <Send size={16} />
                 Release Results to Candidate
               </Button>
-              <Button variant="secondary" disabled={!selected}>
+              <Button variant="secondary" disabled={!selected} onClick={handleSaveDraft}>
                 <Save size={16} />
                 Save Evaluation Draft
               </Button>

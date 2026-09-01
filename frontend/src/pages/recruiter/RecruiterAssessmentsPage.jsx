@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, Users, ArrowRight } from "lucide-react";
+import { Plus, Search, ArrowRight } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { ROUTES, API_URL } from "../../utils/constants";
+import { ROUTES } from "../../utils/constants";
+import { assessmentService } from "../../services/assessmentService";
 import "./recruiter.css";
 
 const DIFFICULTY_TONES = { Hard: "danger", Medium: "warning", Easy: "success" };
-const STATUS_TONES = { Active: "success", Published: "success", Draft: "warning", Inactive: "neutral" };
+const STATUS_TONES = { PUBLISHED: "success", ARCHIVED: "neutral", DRAFT: "warning" };
 
 function RecruiterAssessmentsPage() {
   const [query, setQuery] = useState("");
@@ -22,17 +23,16 @@ function RecruiterAssessmentsPage() {
     async function fetchAssessments() {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/assessments/my`);
-        if (!res.ok) throw new Error("Failed to fetch assessments");
-        const data = await res.json();
+        const data = await assessmentService.listMyAssessments();
+        if (!Array.isArray(data)) throw new Error("Failed to fetch assessments");
 
         const withQuestions = await Promise.all(
           data.map(async (a) => {
             try {
-              const qRes = await fetch(`${API_URL}/assessments/${a.assessment_id}/questions`);
-              if (!qRes.ok) return { ...a, questions: 0 };
-              const qData = await qRes.json();
-              return { ...a, questions: qData.length || 0 };
+              const qData = await assessmentService.listAssessmentQuestions(
+                a.assessment_id
+              );
+              return { ...a, questions: (qData && qData.length) || 0 };
             } catch {
               return { ...a, questions: 0 };
             }
@@ -53,9 +53,7 @@ function RecruiterAssessmentsPage() {
     const matchesSearch = assessment.title
       .toLowerCase()
       .includes(query.toLowerCase());
-    const matchesDifficulty =
-      difficulty === "All" || assessment.difficulty === difficulty;
-    return matchesSearch && matchesDifficulty;
+    return matchesSearch;
   });
 
   return (
@@ -121,7 +119,9 @@ function RecruiterAssessmentsPage() {
               </div>
 
               <h3>{assessment.title}</h3>
-              <p className="assessment-meta">Created by System Admin</p>
+              {assessment.description && (
+                <p className="assessment-meta">{assessment.description}</p>
+              )}
 
               <div className="assessment-card-stats">
                 <span>
@@ -137,10 +137,6 @@ function RecruiterAssessmentsPage() {
                 <Link to={ROUTES.RECRUITER.GRADING} className="link-arrow">
                   View Results <ArrowRight size={14} />
                 </Link>
-                <span className="assessment-invited">
-                  <Users size={14} />
-                  N/A
-                </span>
               </div>
             </div>
           ))}

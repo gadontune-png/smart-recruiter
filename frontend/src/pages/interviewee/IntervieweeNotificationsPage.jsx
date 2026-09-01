@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Bell, CheckCheck, Clock3, Inbox, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { API_URL } from "../../utils/constants";
+import { notificationService } from "../../services/assessmentService";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
@@ -16,8 +16,8 @@ function IntervieweeNotificationsPage() {
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetch(`${API_URL}/notifications?user_id=${user.user_id}`)
-      .then((res) => res.json())
+    notificationService
+      .listNotifications(user.user_id)
       .then((data) => setNotifications(Array.isArray(data) ? data : []))
       .catch(() => setNotifications([]));
   }, [user?.user_id]);
@@ -28,6 +28,7 @@ function IntervieweeNotificationsPage() {
   );
 
   const handleMarkAsRead = (id) => {
+    notificationService.markAsRead(id).catch(() => {});
     setNotifications((currentNotifications) =>
       currentNotifications.map((notification) =>
         notification.notification_id === id ? { ...notification, is_read: true } : notification
@@ -36,6 +37,8 @@ function IntervieweeNotificationsPage() {
   };
 
   const handleMarkAllAsRead = () => {
+    const unread = notifications.filter((n) => !n.is_read);
+    unread.forEach((n) => notificationService.markAsRead(n.notification_id).catch(() => {}));
     setNotifications((currentNotifications) =>
       currentNotifications.map((notification) => ({ ...notification, is_read: true }))
     );

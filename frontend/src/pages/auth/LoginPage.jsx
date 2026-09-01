@@ -38,7 +38,7 @@ function LoginPage() {
 
     const result = await loginUser(values);
     const home =
-      result.payload?.role === "recruiter"
+      result.payload?.user?.role === "recruiter"
         ? ROUTES.RECRUITER.DASHBOARD
         : ROUTES.INTERVIEWEE.DASHBOARD;
     const from = location.state?.from;

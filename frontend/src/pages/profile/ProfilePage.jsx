@@ -6,19 +6,12 @@ import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import "./profile.css";
 
-const ACCOUNT_INFO = [
-  { label: "Email Address", value: "alex.rivera@devmail.io" },
-  { label: "Role", value: "Software Engineer" },
-  { label: "Experience", value: "5+ years" },
-  { label: "Location", value: "Remote / EST" },
-];
-
 function ProfilePage() {
   const { user, logoutUser } = useAuth();
 
   if (!user) return null;
 
-  const initials = user.name
+  const initials = user.full_name
     ?.split(" ")
     .map((part) => part[0])
     .slice(0, 2)
@@ -26,10 +19,18 @@ function ProfilePage() {
     .toUpperCase();
 
   const isRecruiter = user.role === ROLES.RECRUITER;
-  const roleLabel = isRecruiter ? "System Admin" : "Developer Role";
   const settingsPath = isRecruiter
     ? ROUTES.RECRUITER.SETTINGS
     : ROUTES.INTERVIEWEE.SETTINGS;
+
+  const memberSince = user.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "N/A";
+
+  const ACCOUNT_INFO = [
+    { label: "Email Address", value: user.email || "N/A" },
+    { label: "Role", value: user.role || "N/A" },
+  ];
 
   return (
     <div className="profile-page">
@@ -40,24 +41,24 @@ function ProfilePage() {
       <section className="profile-hero">
         <div className="profile-hero-avatar">{initials}</div>
         <div className="profile-hero-meta">
-          <h1>{user.name}</h1>
-          <p className="profile-hero-role">{roleLabel}</p>
+          <h1>{user.full_name || "User"}</h1>
+          <p className="profile-hero-role">{user.role || "N/A"}</p>
           <div className="profile-hero-tags">
-            <Badge variant="info">Core Team</Badge>
+            <Badge variant={isRecruiter ? "info" : "success"}>{isRecruiter ? "Recruiter" : "Interviewee"}</Badge>
             <Badge variant="success">Active</Badge>
           </div>
         </div>
         <div className="profile-hero-stats">
           <div>
-            <strong>24</strong>
+            <strong>N/A</strong>
             <span>Assessments</span>
           </div>
           <div>
-            <strong>156</strong>
+            <strong>N/A</strong>
             <span>Candidates</span>
           </div>
           <div>
-            <strong>92%</strong>
+            <strong>N/A</strong>
             <span>Match Rate</span>
           </div>
         </div>
@@ -80,7 +81,7 @@ function ProfilePage() {
             ))}
             <div className="profile-info-row">
               <span className="profile-info-label">Member Since</span>
-              <span className="profile-info-value">January 2026</span>
+              <span className="profile-info-value">{memberSince}</span>
             </div>
           </div>
           <div className="profile-card-foot">

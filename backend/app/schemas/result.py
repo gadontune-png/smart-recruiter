@@ -1,25 +1,23 @@
-import uuid
 from datetime import datetime
+from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ResultCreate(BaseModel):
-    submission_id: uuid.UUID
-    assessment_id: uuid.UUID
-    interviewee_id: uuid.UUID
+    submission_id: int
+    assessment_id: int
+    interviewee_id: int
     total_score: float
 
 
 class ResultOut(BaseModel):
-    id: uuid.UUID
-    submission_id: uuid.UUID
-    assessment_id: uuid.UUID
-    interviewee_id: uuid.UUID
+    id: int
+    submission_id: int
+    assessment_id: int
+    interviewee_id: int
     total_score: float
     grade_released: bool
     calculated_at: datetime
 
-    class Config:
-        from_attributes = True
-
+    model_config = ConfigDict(from_attributes=True)

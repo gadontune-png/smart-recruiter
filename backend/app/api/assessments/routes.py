@@ -2,21 +2,37 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.assessments.assessment import Assessment
+from app.core.deps import get_current_user, require_recruiter
+from app.models.assessments.assessment import Assessment, AssessmentStatus
 from app.models.questions.question import Question
-from app.schemas.assessment import AssessmentCreate, AssessmentUpdate, AssessmentOut, AssessmentDetailOut, QuestionCreate, QuestionOut
+from app.models.questions.option import QuestionOption
+from app.models.user import User
+from app.schemas.assessment import AssessmentCreate, AssessmentUpdate, AssessmentOut, AssessmentDetailOut
+from app.schemas.question import QuestionCreate, QuestionOut
 
 router = APIRouter(prefix="/api/assessments", tags=["assessments"])
 
 
+@router.get("", response_model=list[AssessmentOut])
 @router.get("/", response_model=list[AssessmentOut])
 def list_assessments(db: Session = Depends(get_db)):
-    return db.query(Assessment).filter(Assessment.status == "PUBLISHED").all()
+    return (
+        db.query(Assessment)
+        .filter(Assessment.status == AssessmentStatus.PUBLISHED)
+        .all()
+    )
 
 
 @router.get("/my", response_model=list[AssessmentOut])
-def list_my_assessments(db: Session = Depends(get_db)):
-    return db.query(Assessment).all()
+def list_my_assessments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Assessment)
+        .filter(Assessment.recruiter_id == current_user.user_id)
+        .all()
+    )
 
 
 @router.get("/{assessment_id}", response_model=AssessmentDetailOut)
@@ -27,9 +43,14 @@ def get_assessment(assessment_id: int, db: Session = Depends(get_db)):
     return assessment
 
 
+@router.post("", response_model=AssessmentOut, status_code=201)
 @router.post("/", response_model=AssessmentOut, status_code=201)
-def create_assessment(payload: AssessmentCreate, db: Session = Depends(get_db)):
-    assessment = Assessment(**payload.model_dump())
+def create_assessment(
+    payload: AssessmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
+    assessment = Assessment(**payload.model_dump(), recruiter_id=current_user.user_id)
     db.add(assessment)
     db.commit()
     db.refresh(assessment)
@@ -59,13 +80,40 @@ def delete_assessment(assessment_id: int, db: Session = Depends(get_db)):
     return {"detail": "Assessment deleted"}
 
 
+@router.post("/{assessment_id}/publish", response_model=AssessmentOut)
+def publish_assessment(assessment_id: int, db: Session = Depends(get_db)):
+    assessment = db.query(Assessment).filter(Assessment.assessment_id == assessment_id).first()
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    if not assessment.questions:
+        raise HTTPException(status_code=400, detail="Assessment must have at least one question before publishing")
+    assessment.status = AssessmentStatus.PUBLISHED
+    db.commit()
+    db.refresh(assessment)
+    return assessment
+
+
 @router.post("/{assessment_id}/questions", response_model=QuestionOut, status_code=201)
 def add_question(assessment_id: int, payload: QuestionCreate, db: Session = Depends(get_db)):
     assessment = db.query(Assessment).filter(Assessment.assessment_id == assessment_id).first()
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
-    question = Question(**payload.model_dump(), assessment_id=assessment_id)
+    data = payload.model_dump()
+    options_data = data.pop("options", [])
+    data.pop("difficulty", None)
+    data.pop("assessment_id", None)
+    question = Question(**data, assessment_id=assessment_id)
     db.add(question)
+    db.flush()
+
+    for option_data in options_data:
+        db.add(
+            QuestionOption(
+                question_id=question.question_id,
+                option_text=option_data["option_text"],
+                is_correct=option_data.get("is_correct", False),
+            )
+        )
     db.commit()
     db.refresh(question)
     return question

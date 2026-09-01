@@ -3,7 +3,7 @@ import { UploadCloud, Mail, UserPlus } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { Input, Select } from "../../components/forms";
-import { API_URL } from "../../utils/constants";
+import { assessmentService, invitationService } from "../../services/assessmentService";
 import "./recruiter.css";
 import "./recruiter-invitations.css";
 
@@ -27,11 +27,8 @@ function RecruiterInvitationsPage() {
 
   async function fetchInvitations() {
     try {
-      const res = await fetch(`${API_URL}/invitations`);
-      if (res.ok) {
-        const data = await res.json();
-        setInvitations(data);
-      }
+      const data = await invitationService.listInvitations();
+      setInvitations(data);
     } catch (err) {
       console.error("Failed to fetch invitations", err);
     }
@@ -39,11 +36,8 @@ function RecruiterInvitationsPage() {
 
   async function fetchAssessments() {
     try {
-      const res = await fetch(`${API_URL}/assessments/my`);
-      if (res.ok) {
-        const data = await res.json();
-        setAssessments(data);
-      }
+      const data = await assessmentService.listMyAssessments();
+      setAssessments(data);
     } catch (err) {
       console.error("Failed to fetch assessments", err);
     }
@@ -64,13 +58,9 @@ function RecruiterInvitationsPage() {
     setLoading(true);
     try {
       for (const candidateId of added) {
-        await fetch(`${API_URL}/invitations`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assessment_id: Number(selectedAssessment),
-            interviewee_id: Number(candidateId),
-          }),
+        await invitationService.createInvitation({
+          assessment_id: Number(selectedAssessment),
+          interviewee_id: Number(candidateId),
         });
       }
       setAdded([]);
@@ -195,30 +185,32 @@ function RecruiterInvitationsPage() {
         </section>
       </div>
 
-      <section className="panel email-preview">
-        <div className="panel-heading">
-          <h2>Candidate Notification Preview <span className="email-tag">(Email Template)</span></h2>
-          <Mail size={18} className="panel-heading-icon" />
-        </div>
-        <div className="panel-body">
-          <div className="email-box">
-            <p className="email-subject">
-              <strong>Subject:</strong> You have been invited to complete a technical challenge for Smart Recruiter
-            </p>
-            <p className="email-greeting">Hi Candidate,</p>
-            <p className="email-body">
-              An engineer from our recruitment team has assigned you the Senior React Developer Challenge.
-              This assessment evaluates your front-end engineering fundamentals and will take approximately
-              60 minutes to complete. Please schedule a quiet window to focus on the challenge.
-            </p>
-            <Button>Start Technical Challenge</Button>
-            <p className="email-note">
-              Note: This invitation link is valid for 7 days. If you experience technical errors, please reach
-              out to candidates@smartrecruiter.com
-            </p>
+      {selectedAssessment && (
+        <section className="panel email-preview">
+          <div className="panel-heading">
+            <h2>Candidate Notification Preview <span className="email-tag">(Email Template)</span></h2>
+            <Mail size={18} className="panel-heading-icon" />
           </div>
-        </div>
-      </section>
+          <div className="panel-body">
+            <div className="email-box">
+              <p className="email-subject">
+                <strong>Subject:</strong> You have been invited to complete a technical challenge for Smart Recruiter
+              </p>
+              <p className="email-greeting">Hi Candidate,</p>
+              <p className="email-body">
+                An engineer from our recruitment team has assigned you the {assessments.find((a) => String(a.assessment_id) === String(selectedAssessment))?.title || "Technical Challenge"}.
+                This assessment evaluates your engineering fundamentals and will take approximately
+                {assessments.find((a) => String(a.assessment_id) === String(selectedAssessment))?.time_limit_minutes || 60} minutes to complete. Please schedule a quiet window to focus on the challenge.
+              </p>
+              <Button>Start Technical Challenge</Button>
+              <p className="email-note">
+                Note: This invitation link is valid for 7 days. If you experience technical errors, please reach
+                out to candidates@smartrecruiter.com
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -12,6 +12,10 @@ class UserRole(str, enum.Enum):
     INTERVIEWEE = "interviewee"
 
 
+RECRUITER = UserRole.RECRUITER.value
+INTERVIEWEE = UserRole.INTERVIEWEE.value
+
+
 class User(Base):
     __tablename__ = "users"
 

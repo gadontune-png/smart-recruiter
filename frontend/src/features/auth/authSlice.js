@@ -2,17 +2,27 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { authService } from "../../services/authService";
 import { STORAGE_KEYS } from "../../utils/constants";
 
-function loadStoredUser() {
+function loadStoredAuth() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.AUTH);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.user) return parsed;
+    return { access_token: parsed?.token || null, user: parsed || null };
   } catch {
     return null;
   }
 }
 
+function persistAuth(payload) {
+  localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(payload));
+}
+
+const stored = loadStoredAuth();
+
 const initialState = {
-  user: loadStoredUser(),
+  token: stored?.access_token || null,
+  user: stored?.user || null,
   status: "idle",
   error: null,
 };
@@ -45,6 +55,7 @@ const authSlice = createSlice({
   reducers: {
     logout(state) {
       state.user = null;
+      state.token = null;
       state.status = "idle";
       state.error = null;
       localStorage.removeItem(STORAGE_KEYS.AUTH);
@@ -61,9 +72,10 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.user = action.payload;
+        state.user = action.payload.user;
+        state.token = action.payload.access_token;
         state.error = null;
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(action.payload));
+        persistAuth(action.payload);
       })
       .addCase(login.rejected, (state, action) => {
         state.status = "failed";
@@ -75,9 +87,10 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.user = action.payload;
+        state.user = action.payload.user;
+        state.token = action.payload.access_token;
         state.error = null;
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(action.payload));
+        persistAuth(action.payload);
       })
       .addCase(register.rejected, (state, action) => {
         state.status = "failed";

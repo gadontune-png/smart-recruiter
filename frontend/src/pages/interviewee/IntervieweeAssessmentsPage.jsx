@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { Bell, Check, X } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { API_URL } from "../../utils/constants";
+import {
+  invitationService,
+  notificationService,
+} from "../../services/assessmentService";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
@@ -19,16 +22,16 @@ function IntervieweeAssessmentsPage() {
   const [confirmation, setConfirmation] = useState("");
 
   useEffect(() => {
-    fetch(`${API_URL}/invitations`)
-      .then((res) => res.json())
+    invitationService
+      .listInvitations()
       .then((data) => setInvitations(Array.isArray(data) ? data : []))
       .catch(() => setInvitations([]));
   }, []);
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetch(`${API_URL}/notifications?user_id=${user.user_id}`)
-      .then((res) => res.json())
+    notificationService
+      .listNotifications(user.user_id)
       .then((data) => setNotifications(Array.isArray(data) ? data : []))
       .catch(() => setNotifications([]));
   }, [user?.user_id]);
@@ -38,8 +41,8 @@ function IntervieweeAssessmentsPage() {
   ).length;
 
   function acceptInvitation(invitationId) {
-    fetch(`${API_URL}/invitations/${invitationId}/accept`, { method: "POST" })
-      .then((res) => res.json())
+    invitationService
+      .acceptInvitation(invitationId)
       .then(() => {
         setInvitations((current) =>
           current.map((inv) =>
@@ -54,7 +57,8 @@ function IntervieweeAssessmentsPage() {
   }
 
   function markAsRead(id) {
-    fetch(`${API_URL}/notifications/${id}/read`, { method: "PATCH" })
+    notificationService
+      .markAsRead(id)
       .then(() => {
         setNotifications((current) =>
           current.map((n) =>

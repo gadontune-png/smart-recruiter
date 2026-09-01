@@ -87,9 +87,11 @@ const assessmentSlice = createSlice({
         state.items.push(action.payload);
       })
       .addCase(publishAssessment.fulfilled, (state, action) => {
-        const idx = state.items.findIndex((a) => a.id === action.payload.id);
+        const idx = state.items.findIndex(
+          (a) => a.assessment_id === action.payload.assessment_id
+        );
         if (idx !== -1) state.items[idx].status = action.payload.status;
-        if (state.current?.id === action.payload.id) {
+        if (state.current?.assessment_id === action.payload.assessment_id) {
           state.current.status = action.payload.status;
         }
       });

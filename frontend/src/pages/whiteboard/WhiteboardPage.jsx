@@ -11,9 +11,8 @@ import {
   Clock,
   ArrowLeft,
   Code,
-  FileText,
+FileText,
   Terminal,
-  ChevronDown,
   Lightbulb,
   Info,
   AlertCircle,
@@ -25,7 +24,6 @@ import Badge from "../../components/common/Badge";
 import { Select } from "../../components/forms";
 import { questionService, submissionService } from "../../services/assessmentService";
 import { assessmentService } from "../../services/assessmentService";
-import { API_URL } from "../../utils/constants";
 import "./WhiteboardPage.css";
 
 const LANGUAGES = [
@@ -46,11 +44,12 @@ function WhiteboardPage() {
   const [ran, setRan] = useState(false);
   const [running, setRunning] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [activeQuestionTab, setActiveQuestionTab] = useState("description");
 
   const [question, setQuestion] = useState(null);
-  const [assessment, setAssessment] = useState(null);
   const [testCases, setTestCases] = useState([]);
+  const [runOutput, setRunOutput] = useState("");
+  const [runStatus, setRunStatus] = useState(null);
+  const [runError, setRunError] = useState("");
   const [customInput, setCustomInput] = useState("");
   const [customOutput, setCustomOutput] = useState("");
   const [showCustomTest, setShowCustomTest] = useState(false);
@@ -63,18 +62,15 @@ function WhiteboardPage() {
       try {
         setLoading(true);
         if (assessmentId) {
-          const [assessData, questionData] = await Promise.all([
-            assessmentService.getAssessment(assessmentId),
-            questionService.listQuestions(assessmentId),
-          ]);
-          setAssessment(assessData);
-          if (questionData && questionData.length > 0) {
-            setQuestion(questionData[0]);
-            if (questionData[0].starter_code) {
-              setCode(questionData[0].starter_code);
+          const assessments = await assessmentService.getAssessment(assessmentId);
+          const questionList = await questionService.listQuestions(assessmentId);
+          if (questionList && questionList.length > 0) {
+            setQuestion(questionList[0]);
+            if (questionList[0].starter_code) {
+              setCode(questionList[0].starter_code);
             }
-            if (assessData.time_limit_minutes) {
-              setTimeLeft(assessData.time_limit_minutes * 60);
+            if (assessments.time_limit_minutes) {
+              setTimeLeft(assessments.time_limit_minutes * 60);
             }
           }
         }
@@ -86,6 +82,23 @@ function WhiteboardPage() {
     }
     loadQuestion();
   }, [assessmentId]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!code.trim()) return;
+    try {
+      await submissionService.submitCode({
+        code,
+        language,
+        question_id: question?.question_id,
+        attempt_id: null,
+      });
+    } catch (err) {
+      setRunError(err.message || "Failed to submit solution");
+      return;
+    }
+    setSubmitted(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, [code, language, question]);
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -101,7 +114,7 @@ function WhiteboardPage() {
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
-  }, [timeLeft]);
+  }, [timeLeft, handleSubmit]);
 
   const lines = code.split("\n");
 
@@ -117,60 +130,38 @@ function WhiteboardPage() {
     setCode(question?.starter_code || "");
     setRan(false);
     setTestCases([]);
+    setRunOutput("");
+    setRunStatus(null);
+    setRunError("");
     setShowCustomTest(false);
   };
 
-  const runTestCase = useCallback(
-    (testCase) => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const hasInput = testCase.input && testCase.input !== "";
-          const hasExpected = testCase.expected && testCase.expected !== "";
-          const codeWorks = code.trim().length > 0;
-          const passed = codeWorks && hasExpected;
-          resolve({ ...testCase, passed, running: false });
-        }, 500 + Math.random() * 1000);
-      });
-    },
-    [code]
-  );
-
-  const handleRunCode = async () => {
+  const handleRunCode = async (input) => {
     setRunning(true);
     setRan(true);
-
-    const updatedTests = await Promise.all(
-      testCases.map(async (tc) => {
-        const result = await runTestCase(tc);
-        return result;
-      })
-    );
-    setTestCases(updatedTests);
-    setRunning(false);
+    setRunError("");
+    try {
+      const result = await submissionService.runCode({
+        code: input || code,
+        language,
+      });
+      setRunOutput(result?.stdout || "");
+      setRunStatus(result?.status || "ok");
+      if (result?.stderr) setRunError(result.stderr);
+    } catch (err) {
+      setRunOutput("");
+      setRunError(err.message || "Failed to run code");
+    } finally {
+      setRunning(false);
+    }
   };
 
   const handleRunCustomTest = () => {
     if (!customInput.trim()) return;
-
-    const newTestCase = {
-      name: `Custom Test: ${customInput.slice(0, 30)}...`,
-      input: customInput,
-      expected: customOutput || "Check console output",
-      passed: code.trim().length > 0,
-    };
-
     setShowCustomTest(false);
     setCustomInput("");
     setCustomOutput("");
-
-    setTestCases((prev) => [...prev, newTestCase]);
-    setRan(true);
-  };
-
-  const handleSubmit = () => {
-    if (!code.trim()) return;
-    setSubmitted(true);
-    if (timerRef.current) clearInterval(timerRef.current);
+    handleRunCode(code);
   };
 
   const toggleFont = (delta) => {
@@ -248,8 +239,8 @@ function WhiteboardPage() {
     );
   }
 
-  const totalPassed = testCases.filter((t) => t.passed).length;
-  const totalTests = testCases.length;
+  const totalPassed = runStatus === "ok" ? 1 : 0;
+  const totalTests = ran && runStatus ? 1 : 0;
 
   return (
     <div className="whiteboard-page">
@@ -392,18 +383,22 @@ function WhiteboardPage() {
             )}
           </div>
 
-          <div className="question-stats">
-            <div className="stat-item">
-              <Zap size={14} />
-              <span>Submissions:</span>
-              <span className="stat-value">12,453</span>
+          {question?.submissions_count != null && (
+            <div className="question-stats">
+              <div className="stat-item">
+                <Zap size={14} />
+                <span>Submissions:</span>
+                <span className="stat-value">{question.submissions_count}</span>
+              </div>
+              {question?.acceptance_rate != null && (
+                <div className="stat-item">
+                  <CheckCircle size={14} />
+                  <span>Acceptance:</span>
+                  <span className="stat-value">{question.acceptance_rate}%</span>
+                </div>
+              )}
             </div>
-            <div className="stat-item">
-              <CheckCircle size={14} />
-              <span>Acceptance:</span>
-              <span className="stat-value">58.2%</span>
-            </div>
-          </div>
+          )}
         </section>
 
         {/* ===== CENTER: Code Editor ===== */}
@@ -501,29 +496,30 @@ function WhiteboardPage() {
                     Compiling and executing code...
                   </p>
                 </>
+              ) : ran && runError ? (
+                <>
+                  <p className="console-line console-error">
+                    <XCircle size={14} style={{ display: "inline", marginRight: 6 }} />
+                    Execution failed: {runError}
+                  </p>
+                </>
               ) : ran ? (
                 <>
-                  <p className="console-line console-ok">
-                    <CheckCircle2 size={14} style={{ display: "inline", marginRight: 6 }} />
-                    Executed successfully!
+                  <p className={`console-line ${runStatus === "ok" ? "console-ok" : "console-error"}`}>
+                    {runStatus === "ok" ? (
+                      <CheckCircle2 size={14} style={{ display: "inline", marginRight: 6 }} />
+                    ) : (
+                      <XCircle size={14} style={{ display: "inline", marginRight: 6 }} />
+                    )}
+                    {runStatus === "ok" ? "Executed successfully!" : `Status: ${runStatus}`}
                   </p>
-                  {testCases
-                    .filter((t) => t.passed)
-                    .map((tc, index) => (
-                      <p key={`ok-${index}`} className="console-line console-ok">
-                        &gt; Accepted: {tc.name}
-                      </p>
-                    ))}
-                  {testCases
-                    .filter((t) => !t.passed)
-                    .map((tc, index) => (
-                      <p key={`fail-${index}`} className="console-line console-error">
-                        <XCircle size={14} style={{ display: "inline", marginRight: 6 }} />
-                        Wrong Answer: {tc.name}
-                      </p>
-                    ))}
+                  {runOutput && (
+                    <pre className="console-line console-output" style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>
+                      {runOutput}
+                    </pre>
+                  )}
                   <p className="console-line console-dim" style={{ marginTop: 8 }}>
-                    &gt; Finished in 0.04s
+                    &gt; Tests completed
                   </p>
                 </>
               ) : (
@@ -571,7 +567,7 @@ function WhiteboardPage() {
                 No test cases loaded. Run your code or add a custom test case.
               </p>
             ) : (
-              testCases.map((test, index) => (
+              testCases.map((test) => (
                 <div
                   className={`test-card ${test.passed ? "passed" : !ran ? "" : "failed"} ${running ? "running" : ""}`}
                   key={test.name}

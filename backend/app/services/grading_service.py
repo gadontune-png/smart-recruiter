@@ -3,9 +3,100 @@ import tempfile
 import os
 import signal
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, List
 from dataclasses import dataclass, field
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def as_aware(dt: datetime) -> datetime:
+    if dt is None:
+        return utc_now()
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def is_expired(attempt, time_limit_minutes: int) -> bool:
+    """Return True if the attempt has exceeded its time limit."""
+    if attempt.started_at is None:
+        return False
+    elapsed = (utc_now() - as_aware(attempt.started_at)).total_seconds()
+    return elapsed > time_limit_minutes * 60
+
+
+def finalize_attempt(db, attempt, time_limit_minutes: int):
+    """Mark the attempt as submitted/auto-submitted and compute its score."""
+    from app.models.answers.answer import Answer
+    from app.models.questions.question import Question
+    from app.models.questions.option import QuestionOption
+    from app.models.results.result import Result
+    from app.models.attempts.attempt import AttemptStatus
+
+    if attempt.score is None:
+        total = 0.0
+        earned = 0.0
+        answers = (
+            db.query(Answer).filter(Answer.attempt_id == attempt.attempt_id).all()
+        )
+        for answer in answers:
+            question = (
+                db.query(Question)
+                .filter(Question.question_id == answer.question_id)
+                .first()
+            )
+            if not question:
+                continue
+            qpoints = float(question.points or 0)
+            total += qpoints
+            if answer.selected_option_id is not None:
+                option = (
+                    db.query(QuestionOption)
+                    .filter(QuestionOption.option_id == answer.selected_option_id)
+                    .first()
+                )
+                if option and option.is_correct:
+                    answer.score = qpoints
+                    earned += qpoints
+                else:
+                    answer.score = 0.0
+            elif answer.answer_text and question.question_type == "MULTIPLE_CHOICE":
+                answer.score = 0.0
+            elif answer.code_submission and answer.programming_language:
+                result = execute_code(answer.code_submission, answer.programming_language)
+                answer.score = qpoints if result.status == "ok" else 0.0
+                earned += float(answer.score)
+            else:
+                answer.score = 0.0
+            db.add(answer)
+
+        attempt.score = earned if total else 0.0
+        attempt.submitted_at = utc_now()
+        attempt.status = AttemptStatus.AUTO_SUBMITTED if is_expired(attempt, time_limit_minutes) else AttemptStatus.SUBMITTED
+        db.commit()
+        db.refresh(attempt)
+
+        existing = (
+            db.query(Result)
+            .filter(Result.submission_id == attempt.attempt_id)
+            .first()
+        )
+        if existing is None:
+            result = Result(
+                submission_id=attempt.attempt_id,
+                assessment_id=attempt.assessment_id,
+                interviewee_id=attempt.interviewee_id,
+                total_score=attempt.score,
+                grade_released=False,
+            )
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+
+    return attempt
 
 
 @dataclass

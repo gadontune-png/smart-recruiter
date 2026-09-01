@@ -11,6 +11,7 @@ from app.api.results.codewars_routes import router as codewars_router
 from app.api.assessments.routes import router as assessments_router
 from app.api.questions.routes import router as questions_router
 from app.api.submissions.routes import router as submissions_router
+from app.api.attempts.routes import router as attempts_router
 
 from app.models.user import User
 from app.models.invitations.invitation import Invitation
@@ -41,6 +42,7 @@ app.include_router(auth_router)
 app.include_router(assessments_router)
 app.include_router(questions_router)
 app.include_router(submissions_router)
+app.include_router(attempts_router)
 app.include_router(invitations_router)
 app.include_router(notifications_router)
 app.include_router(results_router)

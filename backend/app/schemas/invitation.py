@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class InvitationCreate(BaseModel):
@@ -21,6 +21,9 @@ class InvitationOut(BaseModel):
     status: str
     invited_at: Optional[datetime] = None
     responded_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    time_limit_minutes: Optional[int] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

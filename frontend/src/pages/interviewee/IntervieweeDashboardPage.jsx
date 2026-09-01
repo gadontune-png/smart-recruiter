@@ -11,7 +11,12 @@ import {
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { useAuth } from "../../hooks/useAuth";
-import { API_URL, ROUTES } from "../../utils/constants";
+import {
+  invitationService,
+  notificationService,
+  assessmentService,
+} from "../../services/assessmentService";
+import { ROUTES } from "../../utils/constants";
 import "./interviewee-dashboard.css";
 
 function timeAgo(dateStr) {
@@ -41,25 +46,15 @@ function IntervieweeDashboardPage() {
 
     const fetchData = async () => {
       try {
-        const [invRes, notifRes, assessRes] = await Promise.all([
-          fetch(`${API_URL}/invitations`, { credentials: "include" }),
-          fetch(`${API_URL}/notifications?user_id=${user.user_id}`, { credentials: "include" }),
-          fetch(`${API_URL}/assessments`, { credentials: "include" }),
-        ]);
-
-        if (!invRes.ok || !notifRes.ok || !assessRes.ok) {
-          throw new Error("Failed to load dashboard data");
-        }
-
         const [invData, notifData, assessData] = await Promise.all([
-          invRes.json(),
-          notifRes.json(),
-          assessRes.json(),
+          invitationService.listInvitations(),
+          notificationService.listNotifications(user.user_id),
+          assessmentService.listAssessments(),
         ]);
 
-        setInvitations(invData);
-        setNotifications(notifData);
-        setAssessments(assessData);
+        setInvitations(Array.isArray(invData) ? invData : []);
+        setNotifications(Array.isArray(notifData) ? notifData : []);
+        setAssessments(Array.isArray(assessData) ? assessData : []);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -84,7 +79,7 @@ function IntervieweeDashboardPage() {
   const stats = [
     { label: "Assessments Completed", value: String(completedCount), delta: completedCount > 0 ? "Ready for review" : "No completed assessments yet", icon: CheckCircle2 },
     { label: "Upcoming", value: String(pendingCount), delta: pendingCount > 0 ? "Next testing window soon" : "No upcoming assessments", icon: CalendarClock },
-    { label: "Average Score", value: invitations.length ? "--" : "0%", delta: "Stable performance", icon: Gauge },
+    { label: "Average Score", value: invitations.length ? "--" : "0%", delta: completedCount > 0 ? "Based on completed assessments" : "Complete assessments to see score", icon: Gauge },
     { label: "Global Rank", value: "N/A", delta: "Complete assessments to earn a rank", icon: Trophy },
   ];
 

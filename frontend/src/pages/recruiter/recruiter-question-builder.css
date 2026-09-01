@@ -153,3 +153,32 @@
     grid-template-columns: 1fr;
   }
 }
+.qw-import {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.qw-import h3 {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+}
+
+.qw-import-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.qw-import-row .input {
+  flex: 1;
+}
+
+.qw-import-error {
+  margin-top: var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}

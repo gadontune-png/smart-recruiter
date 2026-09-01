@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Clock, Trophy } from "lucide-react";
 import Badge from "../../components/common/Badge";
-import { API_URL } from "../../utils/constants";
+import { assessmentService, resultService } from "../../services/assessmentService";
 import "./recruiter.css";
 import "./recruiter-results.css";
 
@@ -15,34 +15,21 @@ function RecruiterResultsPage() {
     async function load() {
       try {
         setLoading(true);
-        const token = localStorage.getItem("sr_auth");
-        const headers = { "Content-Type": "application/json" };
-        if (token) {
-          try {
-            const parsed = JSON.parse(token);
-            if (parsed.token) headers["Authorization"] = `Bearer ${parsed.token}`;
-          } catch {}
-        }
-
-        const assessmentsRes = await fetch(`${API_URL}/assessments/my`, { headers });
-        const assessmentsData = assessmentsRes.ok ? await assessmentsRes.json() : [];
+        const assessmentsData = await assessmentService.listMyAssessments();
 
         const allResults = [];
         for (const assessment of assessmentsData) {
-          try {
-            const res = await fetch(`${API_URL}/assessments/${assessment.assessment_id}/results`, { headers });
-            if (res.ok) {
-              const data = await res.json();
-              if (Array.isArray(data)) {
-                for (const r of data) {
-                  allResults.push({
-                    ...r,
-                    assessment_title: assessment.title,
-                  });
-                }
-              }
+          const data = await resultService
+            .listAssessmentResults(assessment.assessment_id)
+            .catch(() => []);
+          if (Array.isArray(data)) {
+            for (const r of data) {
+              allResults.push({
+                ...r,
+                assessment_title: assessment.title,
+              });
             }
-          } catch {}
+          }
         }
 
         if (cancelled) return;
@@ -70,8 +57,8 @@ function RecruiterResultsPage() {
 
   const stats = [
     { label: "Total Assessments", value: String(assessments.length), delta: `${results.length} total results`, icon: BarChart3, tone: "blue" },
-    { label: "Pass Rate", value: `${passRate}%`, delta: "Target baseline: > 65%", icon: Trophy, tone: "green" },
-    { label: "Average Score", value: `${avgScore}%`, delta: "Across all submissions", icon: Clock, tone: "amber" },
+    { label: "Pass Rate", value: `${passRate}%`, delta: totalSubmissions > 0 ? `Based on ${totalSubmissions} submissions` : "No data yet", icon: Trophy, tone: "green" },
+    { label: "Average Score", value: `${avgScore}%`, delta: totalSubmissions > 0 ? "Across all submissions" : "No data yet", icon: Clock, tone: "amber" },
     { label: "Top Score", value: `${topScore}%`, delta: totalSubmissions > 0 ? "Across all assessments" : "No data yet", icon: TrendingUp, tone: "red" },
   ];
 
@@ -234,7 +221,9 @@ function RecruiterResultsPage() {
               <tbody>
                 {results.map((r) => (
                   <tr key={r.id}>
-                    <td className="cell-strong">Candidate #{r.interviewee_id}</td>
+                    <td className="cell-strong">
+                      {r.interviewee_name || `Candidate #${r.interviewee_id}`}
+                    </td>
                     <td>{r.assessment_title}</td>
                     <td className="cell-score">{r.total_score ?? "N/A"}%</td>
                     <td>{r.calculated_at ? new Date(r.calculated_at).toLocaleDateString() : "N/A"}</td>

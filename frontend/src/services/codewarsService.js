@@ -1,4 +1,4 @@
-import { API_URL } from "../utils/constants";
+import { request } from "./apiClient";
 
 function getErrorMessage(error) {
   if (error && typeof error === "object") {
@@ -10,12 +10,14 @@ function getErrorMessage(error) {
 
 export const codewarsService = {
   async getKata(kataId) {
-    const response = await fetch(`${API_URL}/codewars/katas/${kataId}`);
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(getErrorMessage(data));
+    try {
+      return await request(`/codewars/katas/${kataId}`);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      const finalError = new Error(message);
+      if (error instanceof Error) finalError.cause = error;
+      throw finalError;
     }
-    return response.json();
   },
 
   async importKataAsQuestion(kataId) {

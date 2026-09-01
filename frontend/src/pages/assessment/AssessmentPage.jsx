@@ -4,15 +4,21 @@ import { Flag, Timer } from "lucide-react";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { API_URL } from "../../utils/constants";
+import {
+  assessmentService,
+  attemptService,
+} from "../../services/assessmentService";
 import "./AssessmentPage.css";
 
 const mapQuestionType = (backendType) => {
   switch (backendType) {
+    case "MULTIPLE_CHOICE":
     case "multiple_choice":
       return "mcq";
+    case "CODING":
     case "coding":
       return "coding";
+    case "FREE_TEXT":
     case "text":
     default:
       return "text";
@@ -20,18 +26,8 @@ const mapQuestionType = (backendType) => {
 };
 
 const parseOptions = (question) => {
-  if (question.options) {
-    try {
-      const parsed = typeof question.options === "string"
-        ? JSON.parse(question.options)
-        : question.options;
-      if (Array.isArray(parsed)) return parsed;
-      if (typeof parsed === "object") {
-        return Object.values(parsed);
-      }
-    } catch {
-      return question.options.split(",").map((o) => o.trim());
-    }
+  if (Array.isArray(question?.options) && question.options.length > 0) {
+    return question.options;
   }
   return [];
 };
@@ -45,6 +41,8 @@ function AssessmentPage() {
   const [answers, setAnswers] = useState({});
   const [flagged, setFlagged] = useState(new Set());
   const [submitted, setSubmitted] = useState(false);
+  const [finalScore, setFinalScore] = useState(null);
+  const [startError, setStartError] = useState(null);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
 
@@ -52,29 +50,19 @@ function AssessmentPage() {
   const [assessment, setAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [attemptId, setAttemptId] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        const [assessRes, questionsRes] = await Promise.all([
-          fetch(`${API_URL}/assessments/${id}`),
-          fetch(`${API_URL}/assessments/${id}/questions`),
-        ]);
-
-        if (!assessRes.ok) throw new Error("Failed to load assessment");
-        if (!questionsRes.ok) throw new Error("Failed to load questions");
-
-        const assessData = await assessRes.json();
-        const questionsData = await questionsRes.json();
-
+        const assessData = await assessmentService.getAssessment(id);
         setAssessment(assessData);
-        setQuestions(questionsData);
         if (assessData.time_limit_minutes) {
           setTimeLeft(assessData.time_limit_minutes * 60);
         }
       } catch (err) {
-        setError(err.message);
+        setError(err.message || "Failed to load assessment");
       } finally {
         setLoading(false);
       }
@@ -91,6 +79,20 @@ function AssessmentPage() {
     return () => clearInterval(timer);
   }, [started, submitted, timeLeft]);
 
+  useEffect(() => {
+    if (!started || submitted || timeLeft > 0) return;
+    if (attemptId) {
+      attemptService
+        .submitAttempt(attemptId)
+        .then((result) => setFinalScore(result?.score ?? null))
+        .catch(() => {})
+        .finally(() => setSubmitted(true));
+    } else {
+      const timer = setTimeout(() => setSubmitted(true), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [started, submitted, timeLeft, attemptId]);
+
   const mappedQuestions = questions.map((q) => ({
     id: q.question_id,
     type: mapQuestionType(q.question_type),
@@ -106,14 +108,45 @@ function AssessmentPage() {
 
   const questionCount = mappedQuestions.length;
   const question = mappedQuestions[currentQuestion] || null;
-  const currentAnswer = question ? (answers[question.id] || "") : "";
+  const currentAnswerObj = question ? (answers[question.id] || {}) : {};
+  const currentAnswer = currentAnswerObj.value || "";
+
+  const persistAnswer = async (questionId, payload) => {
+    if (!attemptId) return;
+    try {
+      await attemptService.saveAnswer(attemptId, payload);
+    } catch {
+      // ignore transient save errors
+    }
+  };
 
   const updateAnswer = (value) => {
     if (submitted || timeLeft <= 0 || !question) return;
     setAnswers((previousAnswers) => ({
       ...previousAnswers,
-      [question.id]: value,
+      [question.id]: {
+        value,
+        type: question.type,
+        optionId: question.type === "mcq" ? getOptionId(value) : null,
+      },
     }));
+    if (question.type === "mcq") {
+      const optionId = getOptionId(value);
+      persistAnswer(question.id, { question_id: question.id, selected_option_id: optionId });
+    } else if (question.type === "text") {
+      persistAnswer(question.id, { question_id: question.id, answer_text: value });
+    } else {
+      persistAnswer(question.id, {
+        question_id: question.id,
+        code_submission: value,
+        programming_language: question.language || "javascript",
+      });
+    }
+  };
+
+  const getOptionId = (optionText) => {
+    const option = question?.options.find((o) => o.option_text === optionText);
+    return option ? option.option_id : null;
   };
 
   const handleNext = () => {
@@ -139,11 +172,37 @@ function AssessmentPage() {
   };
 
   const handleSubmit = () => setShowSubmitConfirmation(true);
-  const confirmSubmit = () => {
+
+  const confirmSubmit = async () => {
     setShowSubmitConfirmation(false);
+    if (!attemptId) {
+      setSubmitted(true);
+      return;
+    }
+    try {
+      const result = await attemptService.submitAttempt(attemptId);
+      setFinalScore(result?.score ?? null);
+    } catch {
+      // proceed to completion screen regardless
+    }
     setSubmitted(true);
   };
-  const handleStart = () => setStarted(true);
+
+  const handleStart = async () => {
+    try {
+      setStartError(null);
+      const attempt = await attemptService.startAttempt(id);
+      setAttemptId(attempt?.id ?? attempt?.attempt_id ?? null);
+      if (typeof attempt?.remaining_seconds === "number") {
+        setTimeLeft(attempt.remaining_seconds);
+      }
+      const questionsData = await attemptService.getQuestions(id);
+      setQuestions(Array.isArray(questionsData) ? questionsData : []);
+      setStarted(true);
+    } catch (err) {
+      setStartError(err.message || "Failed to start the assessment");
+    }
+  };
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -216,15 +275,18 @@ function AssessmentPage() {
               </ul>
             </div>
 
-            <div className="assessment-summary">
+              <div className="assessment-summary">
               <div><strong>{questionCount}</strong><span>Questions</span></div>
               <div><strong>{assessment?.time_limit_minutes || 60}</strong><span>Minutes</span></div>
-              <div><strong>3</strong><span>Question types</span></div>
+              <div><strong>{new Set(mappedQuestions.map((q) => q.type)).size}</strong><span>Question types</span></div>
             </div>
 
             <Button size="lg" onClick={handleStart}>
               Start Assessment
             </Button>
+            {startError && (
+              <p style={{ color: "#c00", marginTop: "1rem" }}>{startError}</p>
+            )}
           </div>
         </Card>
       </div>
@@ -248,6 +310,11 @@ function AssessmentPage() {
               ? "Your assessment was automatically submitted because the timer reached zero."
               : "Your answers have been submitted successfully."}
           </p>
+          {typeof finalScore === "number" && (
+            <div className="assessment-submission-summary">
+              <div><strong>{Math.round(finalScore)}%</strong><span>Final Score</span></div>
+            </div>
+          )}
           <div className="assessment-submission-summary">
             <div><strong>{answeredCount}</strong><span>Answered</span></div>
             <div><strong>{questionCount - answeredCount}</strong><span>Unanswered</span></div>
@@ -289,7 +356,6 @@ function AssessmentPage() {
               <span className="question-points">
                 {question.points} Points
               </span>
-              <span className="question-estimate">Estimated time: 10 mins</span>
             </div>
 
             <h2 className="question-title">{question.title}</h2>
@@ -304,22 +370,22 @@ function AssessmentPage() {
                 <div className="answer-options">
                   {question.options.map((option, index) => (
                     <label
-                      key={option}
+                      key={option.option_id ?? option.option_text}
                       className={`answer-option ${
-                        currentAnswer === option ? "selected" : ""
+                        currentAnswerObj.optionId === option.option_id ? "selected" : ""
                       }`}
                     >
                       <input
                         type="radio"
                         name={`question-${question.id}`}
-                        value={option}
-                        checked={currentAnswer === option}
-                        onChange={() => updateAnswer(option)}
+                        value={option.option_text}
+                        checked={currentAnswerObj.optionId === option.option_id}
+                        onChange={() => updateAnswer(option.option_text)}
                       />
                       <span className="option-marker">
                         {String.fromCharCode(65 + index)}
                       </span>
-                      <span>{option}</span>
+                      <span>{option.option_text}</span>
                     </label>
                   ))}
                 </div>

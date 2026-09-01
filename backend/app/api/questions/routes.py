@@ -34,9 +34,13 @@ class BulkQuestionEmailRequest(BaseModel):
     deadline: str = None
 
 
+@router.get("", response_model=List[QuestionOut])
 @router.get("/", response_model=List[QuestionOut])
-def list_questions(db: Session = Depends(get_db)):
-    return db.query(Question).all()
+def list_questions(assessment_id: int | None = None, db: Session = Depends(get_db)):
+    query = db.query(Question)
+    if assessment_id is not None:
+        query = query.filter(Question.assessment_id == assessment_id)
+    return query.order_by(Question.order_number).all()
 
 
 @router.get("/{question_id}", response_model=QuestionOut)
@@ -47,10 +51,24 @@ def get_question(question_id: int, db: Session = Depends(get_db)):
     return question
 
 
+@router.post("", response_model=QuestionOut, status_code=201)
 @router.post("/", response_model=QuestionOut, status_code=201)
 def create_question(payload: QuestionCreate, db: Session = Depends(get_db)):
-    question = Question(**payload.model_dump())
+    data = payload.model_dump()
+    options_data = data.pop("options", [])
+    data.pop("difficulty", None)
+    if not data.get("assessment_id"):
+        raise HTTPException(status_code=400, detail="assessment_id is required")
+    question = Question(**{k: v for k, v in data.items() if k in Question.__table__.columns.keys()})
     db.add(question)
+    db.flush()
+    for option_data in options_data:
+        question.options.append(
+            QuestionOption(
+                option_text=option_data.option_text,
+                is_correct=option_data.get("is_correct", False),
+            )
+        )
     db.commit()
     db.refresh(question)
     return question
