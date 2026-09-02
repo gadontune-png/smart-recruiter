@@ -6,6 +6,8 @@ Smart Recruiter is a web-based technical assessment platform inspired by platfor
 
 The platform is being developed by **DebugMasters** as a full-stack application.
 
+**👉 [Jump to Quickstart →](#quickstart-tldr)** to run the app on your machine in 3 commands.
+
 ---
 
 ## Project Overview
@@ -117,21 +119,97 @@ You can also register new accounts from the Sign Up page.
 
 ## Running Locally
 
-> Requires Python 3.12+ and Node 18+. The frontend expects the backend on the URL configured in `frontend/.env` (default `http://localhost:5000/api`).
+## Quickstart (TL;DR)
 
-### 1. Backend
+> **One-time setup, then start the backend, then start the frontend in a second terminal.**
+> The frontend is hard-wired to the backend URL in `frontend/.env` (`VITE_API_URL=http://localhost:5000/api`), so the **backend must run on port 5000** for the UI to work. Don't change the port unless you also change the `.env`.
+
+**Requirements**
+
+- Python 3.10+ (3.12 recommended)
+- Node.js 18+
+- npm 9+ (bundled with Node 18)
+- Bash (Linux/macOS) or Command Prompt (Windows) — WSL/Git Bash also fine on Windows
+
+### Quickstart (Linux / macOS)
+
+```bash
+git clone <this-repo>
+cd smart-recruiter
+
+./setup.sh --frontend    # creates backend venv, installs deps, seeds DB, installs frontend deps
+./start.sh               # starts backend on :5000 (logs: /tmp/smart_recruiter_backend.log)
+```
+
+In a **second terminal**:
+
+```bash
+cd frontend
+npm run dev              # http://localhost:5173
+```
+
+Open <http://localhost:5173> and log in with one of the demo accounts (see below).
+
+### Quickstart (Windows)
+
+```bat
+git clone <this-repo>
+cd smart-recruiter
+
+setup.bat --frontend     REM creates backend venv, installs deps, seeds DB, installs frontend deps
+start.bat                REM starts backend on :5000
+```
+
+In a **second Command Prompt**:
+
+```bat
+cd frontend
+npm run dev              REM http://localhost:5173
+```
+
+Open <http://localhost:5173> and log in.
+
+> **Heads up — port 5000:** the frontend's `frontend/.env` ships pointing at `http://localhost:5000/api`. If you start the backend on a different port, the UI will look broken (every page shows "Failed to fetch"). Either keep the backend on 5000 or update `frontend/.env` and restart `npm run dev`.
+
+### Demo Accounts
+
+After running the setup script, these accounts exist in the seeded database:
+
+| Role       | Email                  | Password   |
+| ---------- | ---------------------- | ---------- |
+| Recruiter  | `recruiter@demo.com`   | `secret123` |
+| Interviewee| `candidate@demo.com`   | `secret123` |
+
+You can also click **Sign Up** on the login page to create new accounts.
+
+### Manual Setup (if you'd rather run the steps yourself)
+
+#### Backend
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install --upgrade pip
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
+
+# Create your local env file (only if it doesn't exist)
+[ -f .env ] || cp .env.example .env
+
+# Seed the demo accounts (idempotent — safe to re-run)
+python -m app.scripts.seed
+```
+
+#### Start the backend
+
+```bash
+# from the backend/ directory, with the venv activated
+uvicorn app.main:app --host 0.0.0.0 --port 5000
 ```
 
 The SQLite database is created automatically on first start at `backend/dev_smart_recruiter.db`. Health check: `GET /health` → `{"status":"ok"}`.
 
-### 2. Frontend
+#### Frontend
 
 ```bash
 cd frontend
@@ -146,12 +224,40 @@ npm run lint     # ESLint
 npm run build    # production bundle in dist/
 ```
 
-### 3. Run the test suite
+#### Run the test suite
 
 ```bash
 cd backend
 .venv/bin/python -m pytest -q
 ```
+
+---
+
+## Troubleshooting
+
+**`Failed to fetch` on every page in the UI.**
+The frontend can't reach the backend. Check (1) backend is running on port 5000 — `curl http://localhost:5000/health` should return `{"status":"ok", ...}`; (2) `frontend/.env` has `VITE_API_URL=http://localhost:5000/api`; (3) no firewall blocking localhost.
+
+**`pydantic` / `passlib` / `bcrypt` import error after `pip install`.**
+Your existing venv predates `requirements.txt`. Recreate it:
+```bash
+cd backend && rm -rf .venv && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+```
+
+**`Invalid or expired token` immediately after login.**
+JWT secret changed. If you rotated `jwt_secret` in `backend/.env` mid-session, your stored token in the browser is invalid — sign out and back in. Also make sure all teammates agree on the same `jwt_secret` (default is `dev-secret-change-me`).
+
+**`sqlite3.OperationalError: unable to open database file` on first run.**
+`backend/` is not writable, or `DATABASE_URL` in `backend/.env` points to an unwritable path. Check the path is relative to the `backend/` directory (default `sqlite:///./dev_smart_recruiter.db`).
+
+**Backend won't start because port 5000 is busy.**
+Run `./start.sh --stop` (or `start.bat --stop` on Windows) to free the port. On macOS, *AirPlay Receiver* uses port 5000 — disable it in System Settings → AirDrop & Handoff, or change the backend port and update `frontend/.env` to match.
+
+**Codewars import shows "Failed to import kata".**
+The Codewars public API is reachable only with outbound internet access. The backend uses `httpx` against `https://www.codewars.com/api/v1` (configurable via `codewars_base_url` in `backend/.env`).
+
+**`npm run dev` shows CORS errors in the browser console.**
+The backend is configured to allow `http://localhost:5173` and `http://127.0.0.1:5173`. If your dev server runs on a different host/port (e.g. `0.0.0.0:5173` or a LAN IP), update `allow_origins` in `backend/app/main.py`.
 
 ---
 
