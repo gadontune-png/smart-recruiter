@@ -43,6 +43,15 @@ function RecruiterInvitationsPage() {
     }
   }
 
+  async function handleRevoke(invitationId) {
+    try {
+      await invitationService.revokeInvitation(invitationId);
+      setInvitations((prev) => prev.filter((inv) => inv.invitation_id !== invitationId));
+    } catch (err) {
+      console.error("Failed to revoke invitation", err);
+    }
+  }
+
   const rows = invitations.filter(
     (row) => filter === "All" || row.status === filter
   );
@@ -173,7 +182,7 @@ function RecruiterInvitationsPage() {
                       <td>
                         <div className="row-actions">
                           <Button size="sm" variant="ghost">Resend</Button>
-                          <Button size="sm" variant="ghost" className="btn-danger-text">Revoke</Button>
+                          <Button size="sm" variant="ghost" className="btn-danger-text" onClick={() => handleRevoke(row.invitation_id)}>Revoke</Button>
                         </div>
                       </td>
                     </tr>

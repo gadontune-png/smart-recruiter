@@ -29,12 +29,13 @@ function Topbar({ onToggleSidebar }) {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "";
 
-  const initials = user?.name
-    ?.split(" ")
+  const displayName = user?.full_name || user?.name || "User";
+  const initials = displayName
+    .split(" ")
     .map((part) => part[0])
     .slice(0, 2)
     .join("")
-    .toUpperCase() ?? "U";
+    .toUpperCase();
 
   return (
     <header className="topbar">
@@ -92,7 +93,7 @@ function Topbar({ onToggleSidebar }) {
                 {initials}
               </span>
               <div className="topbar-user-meta">
-                <strong>{user.name}</strong>
+                <strong>{displayName}</strong>
                 <span>{roleLabel}</span>
               </div>
             </Link>

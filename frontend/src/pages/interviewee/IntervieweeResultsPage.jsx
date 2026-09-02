@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import {
   invitationService,
   resultService,
+  feedbackService,
 } from "../../services/assessmentService";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
@@ -13,6 +14,7 @@ function IntervieweeResultsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [results, setResults] = useState([]);
+  const [feedbackMap, setFeedbackMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +50,17 @@ function IntervieweeResultsPage() {
           }
         }
         if (!cancelled) setResults(all);
+
+        const fbMap = {};
+        for (const r of all) {
+          const fb = await feedbackService
+            .getFeedbackForResult(r.id)
+            .catch(() => []);
+          if (Array.isArray(fb) && fb.length > 0) {
+            fbMap[r.id] = fb;
+          }
+        }
+        if (!cancelled) setFeedbackMap(fbMap);
       })
       .catch(() => {
         if (!cancelled) setResults([]);
@@ -103,6 +116,19 @@ function IntervieweeResultsPage() {
                 </div>
                 <Badge variant="success">{Math.round(result.total_score)}%</Badge>
               </div>
+              {feedbackMap[result.id] && (
+                <div className="result-feedback" style={{ marginTop: "var(--space-4)", borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-4)" }}>
+                  <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-2)" }}>Mentor Feedback</h3>
+                  {feedbackMap[result.id].map((fb) => (
+                    <div key={fb.feedback_id} style={{ marginBottom: "var(--space-2)", padding: "var(--space-3)", background: "var(--color-bg-subtle)", borderRadius: "var(--radius)" }}>
+                      <p style={{ margin: 0 }}>{fb.comment}</p>
+                      {fb.score != null && (
+                        <small style={{ color: "var(--color-text-muted)" }}>Score: {fb.score}</small>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

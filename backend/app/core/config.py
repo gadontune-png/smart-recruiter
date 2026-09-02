@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -17,3 +19,8 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+if settings.jwt_secret == "dev-secret-change-me" and os.getenv("ENVIRONMENT") == "production":
+    raise RuntimeError(
+        "JWT_SECRET must be set to a secure value in production. "
+        "Set the JWT_SECRET env var to a strong random string."
+    )

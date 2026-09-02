@@ -140,17 +140,18 @@ def test_invitations_and_notifications(client: TestClient, recruiter, interviewe
     accept = client.post(f"/api/invitations/{iid}/accept", headers=target_headers)
     assert accept.status_code == 200 and accept.json()["status"] == "ACCEPTED"
 
-    notes = client.get("/api/notifications", params={"user_id": target_id})
+    notes = client.get("/api/notifications", headers=target_headers)
     assert notes.status_code == 200
     if notes.json():
         nid = notes.json()[0]["notification_id"]
-        mark = client.patch(f"/api/notifications/{nid}/read")
+        mark = client.patch(f"/api/notifications/{nid}/read", headers=target_headers)
         assert mark.status_code == 200 and mark.json()["is_read"] is True
 
 
-def test_code_execution(client: TestClient):
+def test_code_execution(client: TestClient, interviewee):
     r = client.post("/api/submissions/code/run",
-                    json={"code": "print(1 + 1)", "language": "python"})
+                    json={"code": "print(1 + 1)", "language": "python"},
+                    headers=interviewee)
     assert r.status_code == 200
     body = r.json()
     assert body["status"] in ("ok", "partial")

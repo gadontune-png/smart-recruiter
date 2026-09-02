@@ -3,7 +3,6 @@ import { Bell, Check, ArrowRight, Building2, Play, X } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
 import {
   invitationService,
   notificationService,
@@ -13,7 +12,6 @@ import "./interviewee-invitations.css";
 
 function IntervieweeInvitationsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [invitations, setInvitations] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
@@ -25,12 +23,11 @@ function IntervieweeInvitationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!user?.user_id) return;
     notificationService
-      .listNotifications(user.user_id)
+      .listNotifications()
       .then((data) => setNotifications(Array.isArray(data) ? data : []))
       .catch(() => setNotifications([]));
-  }, [user?.user_id]);
+  }, []);
 
   function accept(id) {
     const invitation = invitations.find((inv) => inv.invitation_id === id);
@@ -48,7 +45,16 @@ function IntervieweeInvitationsPage() {
   }
 
   function decline(id) {
-    setInvitations(invitations.filter((inv) => inv.invitation_id !== id));
+    invitationService
+      .declineInvitation(id)
+      .then(() => {
+        setInvitations((current) =>
+          current.map((inv) =>
+            inv.invitation_id === id ? { ...inv, status: "EXPIRED" } : inv
+          )
+        );
+      })
+      .catch(() => {});
   }
 
   function markAllRead() {

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, ArrowRight } from "lucide-react";
+import { Plus, Search, ArrowRight, Send } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { ROUTES } from "../../utils/constants";
-import { assessmentService } from "../../services/assessmentService";
+import { assessmentService, questionService } from "../../services/assessmentService";
 import "./recruiter.css";
 
 const DIFFICULTY_TONES = { Hard: "danger", Medium: "warning", Easy: "success" };
@@ -16,6 +16,7 @@ function RecruiterAssessmentsPage() {
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [publishingId, setPublishingId] = useState(null);
 
   const difficulties = ["All", "Easy", "Medium", "Hard"];
 
@@ -29,7 +30,7 @@ function RecruiterAssessmentsPage() {
         const withQuestions = await Promise.all(
           data.map(async (a) => {
             try {
-              const qData = await assessmentService.listAssessmentQuestions(
+              const qData = await questionService.listQuestions(
                 a.assessment_id
               );
               return { ...a, questions: (qData && qData.length) || 0 };
@@ -55,6 +56,22 @@ function RecruiterAssessmentsPage() {
       .includes(query.toLowerCase());
     return matchesSearch;
   });
+
+  async function handlePublish(id) {
+    setPublishingId(id);
+    try {
+      await assessmentService.publishAssessment(id);
+      setAssessments((prev) =>
+        prev.map((a) =>
+          a.assessment_id === id ? { ...a, status: "PUBLISHED" } : a
+        )
+      );
+    } catch (err) {
+      setError(err.message || "Failed to publish assessment.");
+    } finally {
+      setPublishingId(null);
+    }
+  }
 
   return (
     <div className="recruiter-assessments">
@@ -134,6 +151,16 @@ function RecruiterAssessmentsPage() {
               </div>
 
               <div className="assessment-card-foot">
+                {assessment.status !== "PUBLISHED" && assessment.questions > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => handlePublish(assessment.assessment_id)}
+                    disabled={publishingId === assessment.assessment_id}
+                  >
+                    <Send size={14} />
+                    {publishingId === assessment.assessment_id ? "Publishing..." : "Publish"}
+                  </Button>
+                )}
                 <Link to={ROUTES.RECRUITER.GRADING} className="link-arrow">
                   View Results <ArrowRight size={14} />
                 </Link>

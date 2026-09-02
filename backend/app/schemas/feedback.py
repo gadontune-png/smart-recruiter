@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 class FeedbackCreate(BaseModel):
     answer_id: int
-    recruiter_id: int
     comment: str
     score: Optional[float] = None
 

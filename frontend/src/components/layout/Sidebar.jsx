@@ -90,7 +90,7 @@ function Sidebar({ isOpen, onClose }) {
         {user && (
           <NavLink to={ROUTES.PROFILE} className="sidebar-profile" onClick={onClose}>
             <span className="avatar" aria-hidden="true">
-              {user.name
+              {(user.full_name || user.name)
                 ?.split(" ")
                 .map((part) => part[0])
                 .slice(0, 2)
@@ -98,7 +98,7 @@ function Sidebar({ isOpen, onClose }) {
                 .toUpperCase() || "U"}
             </span>
             <div className="sidebar-profile-meta">
-              <div className="sidebar-profile-name">{user.name}</div>
+              <div className="sidebar-profile-name">{user.full_name || user.name}</div>
               <div className="sidebar-profile-role">{user.role}</div>
             </div>
           </NavLink>

@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Bell, CheckCheck, Clock3, Inbox, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
 import { notificationService } from "../../services/assessmentService";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
@@ -11,16 +10,14 @@ import "./interviewee-notifications.css";
 
 function IntervieweeNotificationsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    if (!user?.user_id) return;
     notificationService
-      .listNotifications(user.user_id)
+      .listNotifications()
       .then((data) => setNotifications(Array.isArray(data) ? data : []))
       .catch(() => setNotifications([]));
-  }, [user?.user_id]);
+  }, []);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,

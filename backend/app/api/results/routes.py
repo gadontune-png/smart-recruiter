@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_recruiter
 from app.models.assessments.assessment import Assessment
 from app.models.results.result import Result
 from app.models.user import User
@@ -30,15 +31,6 @@ def _enrich(result: Result, db: Session) -> ResultDetailOut:
     return out
 
 
-@router.post("/results", response_model=ResultOut)
-def record_result(payload: ResultCreate, db: Session = Depends(get_db)):
-    result = Result(**payload.model_dump())
-    db.add(result)
-    db.commit()
-    db.refresh(result)
-    return result
-
-
 @router.get("/results/{submission_id}", response_model=ResultDetailOut)
 def get_result(submission_id: int, db: Session = Depends(get_db)):
     result = db.query(Result).filter(Result.submission_id == submission_id).first()
@@ -48,7 +40,16 @@ def get_result(submission_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/assessments/{assessment_id}/results", response_model=List[ResultDetailOut])
-def list_results_for_assessment(assessment_id: int, db: Session = Depends(get_db)):
+def list_results_for_assessment(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
+    assessment = db.query(Assessment).filter(Assessment.assessment_id == assessment_id).first()
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    if assessment.recruiter_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not own this assessment")
     results = (
         db.query(Result)
         .filter(Result.assessment_id == assessment_id)
@@ -59,7 +60,16 @@ def list_results_for_assessment(assessment_id: int, db: Session = Depends(get_db
 
 
 @router.post("/assessments/{assessment_id}/release-grades")
-def release_grades(assessment_id: int, db: Session = Depends(get_db)):
+def release_grades(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
+    assessment = db.query(Assessment).filter(Assessment.assessment_id == assessment_id).first()
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    if assessment.recruiter_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not own this assessment")
     results = db.query(Result).filter(Result.assessment_id == assessment_id).all()
     for r in results:
         r.grade_released = True

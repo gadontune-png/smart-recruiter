@@ -69,7 +69,7 @@ def test_assessment_update(client, recruiter):
     a = _create_assessment(client, recruiter, title="Before")
     aid = a["assessment_id"]
 
-    resp = client.patch(f"/api/assessments/{aid}", json={"title": "After"})
+    resp = client.patch(f"/api/assessments/{aid}", json={"title": "After"}, headers=recruiter)
     assert resp.status_code == 200
     assert resp.json()["title"] == "After"
 
@@ -78,7 +78,7 @@ def test_assessment_delete(client, recruiter):
     a = _create_assessment(client, recruiter)
     aid = a["assessment_id"]
 
-    resp = client.delete(f"/api/assessments/{aid}")
+    resp = client.delete(f"/api/assessments/{aid}", headers=recruiter)
     assert resp.status_code == 200
 
     resp = client.get(f"/api/assessments/{aid}")
@@ -105,7 +105,7 @@ def test_list_questions_for_assessment(client, recruiter):
     _add_mcq(client, a["assessment_id"], recruiter, text="Q1")
     _add_mcq(client, a["assessment_id"], recruiter, text="Q2")
 
-    resp = client.get(f"/api/assessments/{a['assessment_id']}/questions")
+    resp = client.get(f"/api/questions?assessment_id={a['assessment_id']}", headers=recruiter)
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
@@ -115,11 +115,11 @@ def test_question_filter_by_assessment(client, recruiter):
     a2 = _create_assessment(client, recruiter, title="Two")
     _add_mcq(client, a1["assessment_id"], recruiter)
 
-    body = client.get(f"/api/assessments/{a1['assessment_id']}/questions").json()
+    body = client.get(f"/api/questions?assessment_id={a1['assessment_id']}", headers=recruiter).json()
     assert len(body) == 1
     assert body[0]["assessment_id"] == a1["assessment_id"]
 
-    body2 = client.get(f"/api/assessments/{a2['assessment_id']}/questions").json()
+    body2 = client.get(f"/api/questions?assessment_id={a2['assessment_id']}", headers=recruiter).json()
     assert len(body2) == 0
 
 

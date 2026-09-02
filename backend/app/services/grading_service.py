@@ -124,7 +124,7 @@ class ExecutionResult:
 
 class CodeExecutor:
     def __init__(self, timeout: int = 10):
-        self.timeout = timeout
+        self.timeout = min(timeout, 30)  # hard cap at 30s
 
     def execute(self, code: str, language: str, test_cases: Optional[List[TestCase]] = None) -> ExecutionResult:
         result = ExecutionResult()

@@ -131,11 +131,36 @@ def accept_invitation(
     return _enrich(invitation)
 
 
-@router.delete("/{invitation_id}")
-def revoke_invitation(invitation_id: int, db: Session = Depends(get_db)):
+@router.post("/{invitation_id}/decline", response_model=InvitationOut)
+def decline_invitation(
+    invitation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     invitation = db.query(Invitation).filter(Invitation.invitation_id == invitation_id).first()
     if not invitation:
         raise HTTPException(status_code=404, detail="Invitation not found")
+    if current_user.role == INTERVIEWEE and invitation.interviewee_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Cannot decline an invitation addressed to another user")
+    invitation.status = InvitationStatus.EXPIRED
+    invitation.responded_at = datetime.utcnow()
+    db.commit()
+    db.refresh(invitation)
+    return _enrich(invitation)
+
+
+@router.delete("/{invitation_id}")
+def revoke_invitation(
+    invitation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
+    invitation = db.query(Invitation).filter(Invitation.invitation_id == invitation_id).first()
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    assessment = db.query(Assessment).filter(Assessment.assessment_id == invitation.assessment_id).first()
+    if assessment and assessment.recruiter_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not own this invitation")
     db.delete(invitation)
     db.commit()
     return {"detail": "Invitation revoked"}
