@@ -3,7 +3,11 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     app_name: str = "Smart Recruiter API"
-    database_url: str = "sqlite:///./smart_recruiter.db"
+    # PostgreSQL is the only supported database.
+    # Override via the DATABASE_URL env var or backend/.env.
+    database_url: str = (
+        "postgresql+psycopg://smartrecruiter:smartrecruiter@localhost:5433/smartrecruiter"
+    )
     jwt_secret: str = "dev-secret-change-me"
     codewars_base_url: str = "https://www.codewars.com/api/v1"
 

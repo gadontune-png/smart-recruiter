@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,7 +28,13 @@ from app.models.submissions.code_submission import CodeSubmission
 from app.models.codewars.challenge import CodewarsChallenge
 from app.models.codewars.assessment_challenge import AssessmentChallenge
 
-app = FastAPI(title="Smart Recruiter API", redirect_slashes=False)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="Smart Recruiter API", redirect_slashes=False, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,8 +43,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-Base.metadata.create_all(bind=engine)
 
 app.include_router(auth_router)
 app.include_router(assessments_router)
