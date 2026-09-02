@@ -66,13 +66,6 @@ export const questionService = {
 };
 
 export const submissionService = {
-  async submitCode(payload) {
-    return request("/submissions/code", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
-
   async runCode(payload) {
     return request("/submissions/code/run", {
       method: "POST",

@@ -22,8 +22,7 @@ FileText,
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { Select } from "../../components/forms";
-import { questionService, submissionService } from "../../services/assessmentService";
-import { assessmentService } from "../../services/assessmentService";
+import { submissionService, attemptService } from "../../services/assessmentService";
 import "./WhiteboardPage.css";
 
 const LANGUAGES = [
@@ -46,6 +45,7 @@ function WhiteboardPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const [question, setQuestion] = useState(null);
+  const [attemptId, setAttemptId] = useState(null);
   const [testCases, setTestCases] = useState([]);
   const [runOutput, setRunOutput] = useState("");
   const [runStatus, setRunStatus] = useState(null);
@@ -62,15 +62,16 @@ function WhiteboardPage() {
       try {
         setLoading(true);
         if (assessmentId) {
-          const assessments = await assessmentService.getAssessment(assessmentId);
-          const questionList = await questionService.listQuestions(assessmentId);
+          const attempt = await attemptService.startAttempt(assessmentId);
+          setAttemptId(attempt?.id ?? attempt?.attempt_id ?? null);
+          if (typeof attempt?.remaining_seconds === "number") {
+            setTimeLeft(attempt.remaining_seconds);
+          }
+          const questionList = await attemptService.getQuestions(assessmentId);
           if (questionList && questionList.length > 0) {
             setQuestion(questionList[0]);
             if (questionList[0].starter_code) {
               setCode(questionList[0].starter_code);
-            }
-            if (assessments.time_limit_minutes) {
-              setTimeLeft(assessments.time_limit_minutes * 60);
             }
           }
         }
@@ -83,22 +84,42 @@ function WhiteboardPage() {
     loadQuestion();
   }, [assessmentId]);
 
+  const persistCode = useCallback(
+    async (value) => {
+      if (!attemptId || !question?.question_id) return;
+      try {
+        await attemptService.saveAnswer(attemptId, {
+          question_id: question.question_id,
+          code_submission: value,
+          programming_language: language,
+        });
+      } catch (err) {
+        console.error("Failed to save answer:", err);
+      }
+    },
+    [attemptId, question, language]
+  );
+
+  const handleCodeChange = (value) => {
+    setCode(value);
+    persistCode(value);
+  };
+
   const handleSubmit = useCallback(async () => {
     if (!code.trim()) return;
     try {
-      await submissionService.submitCode({
-        code,
-        language,
-        question_id: question?.question_id,
-        attempt_id: null,
-      });
+      if (attemptId) {
+        await attemptService.submitAttempt(attemptId);
+      } else {
+        await submissionService.runCode({ code, language });
+      }
     } catch (err) {
       setRunError(err.message || "Failed to submit solution");
       return;
     }
     setSubmitted(true);
     if (timerRef.current) clearInterval(timerRef.current);
-  }, [code, language, question]);
+  }, [code, language, attemptId]);
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -460,7 +481,7 @@ function WhiteboardPage() {
               <textarea
                 className="code-textarea"
                 value={code}
-                onChange={(event) => setCode(event.target.value)}
+                onChange={(event) => handleCodeChange(event.target.value)}
                 spellCheck="false"
                 style={{ fontSize: `${fontSize}px` }}
                 aria-label="Code editor"
