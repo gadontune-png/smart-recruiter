@@ -7,12 +7,12 @@ import {
   resultService,
 } from "../../services/assessmentService";
 import { request } from "../../services/apiClient";
-import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../components/common/Toast";
 import "./recruiter.css";
 import "./recruiter-grading.css";
 
 function RecruiterGradingPage() {
-  const { user } = useAuth();
+  const toast = useToast();
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,6 +20,7 @@ function RecruiterGradingPage() {
   const [autoRelease, setAutoRelease] = useState(false);
   const [notes, setNotes] = useState("");
   const [score, setScore] = useState("0");
+  const [releasing, setReleasing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +39,7 @@ function RecruiterGradingPage() {
             for (const r of data) {
               results.push({
                 id: r.id,
+                submission_id: r.submission_id,
                 assessment_id: r.assessment_id,
                 interviewee_id: r.interviewee_id,
                 interviewee_name: r.interviewee_name,
@@ -74,8 +76,13 @@ function RecruiterGradingPage() {
 
   async function handleRelease() {
     if (!selected) return;
+    if (selected.grade_released) {
+      toast.warning("Grades already released for this candidate's assessment.");
+      return;
+    }
+    setReleasing(true);
     try {
-      await resultService.releaseGrades(selected.assessment_id);
+      const res = await resultService.releaseGrades(selected.assessment_id);
       setCandidates((current) =>
         current.map((c) =>
           c.assessment_id === selected.assessment_id
@@ -86,23 +93,33 @@ function RecruiterGradingPage() {
       setSelected((current) =>
         current ? { ...current, grade_released: true } : current
       );
+      const released = res?.released_count ?? 0;
+      toast.success(
+        released > 0
+          ? `Grades released to ${released} candidate(s).`
+          : "Grades released successfully."
+      );
     } catch (err) {
+      toast.error(err.message || "Failed to release grades");
       setError(err.message || "Failed to release grades");
+    } finally {
+      setReleasing(false);
     }
   }
 
   async function handleSaveDraft() {
     if (!selected) return;
     try {
-      await request("/feedback", {
+      const parsedScore = Number(score);
+      const scorePayload = score !== "" && Number.isFinite(parsedScore) ? parsedScore : null;
+      await request(`/results/${selected.id}/feedback`, {
         method: "POST",
         body: JSON.stringify({
-          answer_id: selected.submission_id || selected.id,
-          recruiter_id: user?.user_id || 0,
           comment: notes || "No feedback notes provided.",
-          score: Number(score) || null,
+          score: scorePayload,
         }),
       });
+      toast.success("Feedback saved and sent to the candidate.");
     } catch (err) {
       setError(err.message || "Failed to save evaluation");
     }
@@ -253,9 +270,13 @@ function RecruiterGradingPage() {
             )}
 
             <div className="grading-actions">
-              <Button disabled={!selected} onClick={handleRelease}>
+              <Button
+                disabled={!selected || releasing}
+                onClick={handleRelease}
+                loading={releasing}
+              >
                 <Send size={16} />
-                Release Results to Candidate
+                {selected?.grade_released ? "Grades Released" : releasing ? "Releasing..." : "Release Results to Candidate"}
               </Button>
               <Button variant="secondary" disabled={!selected} onClick={handleSaveDraft}>
                 <Save size={16} />

@@ -18,9 +18,9 @@
   gap: var(--space-4);
   flex-wrap: wrap;
   padding: var(--space-3) var(--space-5);
-  background: var(--editor-surface);
+  background: linear-gradient(180deg, var(--editor-surface), #15171d);
   border-bottom: 1px solid var(--editor-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -46,19 +46,147 @@
 
 .wb-problem-badge {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .wb-problem-title {
   font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-problem-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wb-question-count {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.wb-timer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text);
 }
 
-.wb-problem-meta {
-  font-size: var(--font-size-sm);
+.wb-timer-value {
+  min-width: 2ch;
+  text-align: center;
+}
+
+.wb-timer-total {
   color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.wb-submit-btn {
+  margin-left: 1rem;
+  background: linear-gradient(135deg, var(--color-primary), #6366f1);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+
+.wb-submit-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.45);
+  filter: brightness(1.05);
+}
+
+/* ---------- Question Navigator ---------- */
+.question-navigator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--editor-surface), var(--color-bg));
+}
+
+.wb-nav-pills {
+  display: flex;
+  gap: var(--space-1);
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.wb-nav-pill {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wb-nav-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.wb-nav-pill.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+.wb-nav-pill.answered:not(.active) {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.wb-nav-btn {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wb-nav-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.wb-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .wb-controls {
@@ -76,9 +204,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1);
+  padding: 3px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  background: var(--color-bg);
 }
 
 .wb-font-size button {
@@ -92,10 +221,12 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--color-text);
+  transition: all 0.15s ease;
 }
 
 .wb-font-size button:hover {
   background: var(--color-bg-muted);
+  color: var(--color-primary);
 }
 
 .wb-font-size span {
@@ -103,20 +234,6 @@
   color: var(--color-text-muted);
   min-width: 2.4rem;
   text-align: center;
-}
-
-.wb-timer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text);
 }
 
 .wb-timer.warning {
@@ -130,14 +247,10 @@
   50% { opacity: 0.6; }
 }
 
-.wb-submit-btn {
-  margin-left: auto;
-}
-
 /* ---------- Main Layout (3-column like LeetCode) ---------- */
 .whiteboard-layout {
   display: grid;
-  grid-template-columns: 18rem 1fr 18rem;
+  grid-template-columns: 22rem 1fr 20rem;
   flex: 1;
   overflow: hidden;
   height: calc(100vh - 64px - 48px);
@@ -147,7 +260,7 @@
 .question-panel {
   background: var(--color-bg);
   border-right: 1px solid var(--color-border);
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -159,9 +272,6 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border);
   background: var(--editor-surface);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .question-header h2 {
@@ -177,18 +287,25 @@
 }
 
 .question-title {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--color-text);
-  margin: 0 0 var(--space-3) 0;
-  line-height: 1.4;
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
 }
 
 .question-difficulty {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.question-section {
+  margin-bottom: var(--space-5);
 }
 
 .question-description {
@@ -198,17 +315,122 @@
   margin-bottom: var(--space-5);
 }
 
-.question-section {
-  margin-bottom: var(--space-5);
+.md-block {
+  margin-bottom: var(--space-1);
+}
+
+.md-heading {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  margin: var(--space-3) 0 var(--space-2) 0;
+}
+
+.md-heading:first-child {
+  margin-top: 0;
+}
+
+.md-paragraph {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.md-list-item {
+  margin: 0 0 var(--space-1) 0;
+  padding-left: var(--space-1);
+  position: relative;
+}
+
+.inline-code {
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--editor-gutter);
+  color: #79c0ff;
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
 .question-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--font-size-sm);
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--color-text);
-  margin: 0 0 var(--space-2) 0;
-  padding-bottom: var(--space-1);
+  margin: 0 0 var(--space-3) 0;
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--color-border);
+}
+
+.section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 6px rgba(79, 70, 229, 0.5);
+  display: inline-block;
+}
+
+.example-card {
+  background: var(--editor-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.example-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--editor-gutter);
+  border-bottom: 1px solid var(--editor-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.example-card-bullets {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.example-card-bullets i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--color-border);
+}
+
+.example-card-bullets i:first-child { background: #f14c4c; }
+.example-card-bullets i:nth-child(2) { background: #e3b341; }
+.example-card-bullets i:nth-child(3) { background: #6b9954; }
+
+.example-card-label {
+  flex: 1;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.example-card-code {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.starter-code {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--editor-bg);
 }
 
 .question-example {
@@ -301,7 +523,7 @@
 
 .code-gutter {
   flex-shrink: 0;
-  padding: var(--space-4) 0;
+  padding: var(--space-4) 0.75rem;
   background: var(--editor-gutter);
   color: #858585;
   text-align: right;
@@ -310,6 +532,7 @@
   line-height: 1.6;
   user-select: none;
   border-right: 1px solid var(--editor-border);
+  overflow: hidden;
 }
 
 .code-gutter div {
@@ -317,14 +540,12 @@
 }
 
 .code-textarea {
-  position: absolute;
-  inset: 0;
+  flex: 1;
   width: 100%;
   height: 100%;
   padding: var(--space-4);
-  padding-left: 1rem;
   background: transparent;
-  color: transparent;
+  color: #d4d4d4;
   caret-color: #d4d4d4;
   font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
   font-size: 14px;
@@ -334,30 +555,9 @@
   resize: none;
   white-space: pre;
   overflow: auto;
-  z-index: 2;
 }
 
-.code-overlay {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  padding: var(--space-4);
-  color: #d4d4d4;
-  font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.code-overlay pre {
-  margin: 0;
-  white-space: pre;
-  height: 1.6em;
-  font-family: inherit;
-}
-
-.code-editor.running .code-overlay pre:first-of-type {
+.code-editor.running .code-gutter div:first-child {
   color: #569cd6;
   animation: pulse 0.8s ease infinite;
 }
@@ -591,6 +791,19 @@
 
 .submit-section .btn {
   margin: 0;
+}
+
+.wb-submit-msg {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  display: block;
+  width: 100%;
+  color: var(--color-success, #16a34a);
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px dashed rgba(22, 163, 74, 0.4);
+  border-radius: var(--radius-lg);
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 /* ---------- Complete State ---------- */

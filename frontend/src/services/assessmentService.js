@@ -83,6 +83,10 @@ export const attemptService = {
     return request(`/assessments/${assessmentId}/start`, { method: "POST" });
   },
 
+  async getAttemptStatus(assessmentId) {
+    return request(`/assessments/${assessmentId}/attempt-status`);
+  },
+
   async getQuestions(assessmentId) {
     return request(`/assessments/${assessmentId}/questions`);
   },
@@ -126,6 +130,20 @@ export const invitationService = {
     });
   },
 
+  async createEmailInvitation(payload) {
+    return request("/invitations/email", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createEmailBulkInvitations(payload) {
+    return request("/invitations/email/bulk", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
   async acceptInvitation(id) {
     return request(`/invitations/${id}/accept`, { method: "POST" });
   },
@@ -152,6 +170,10 @@ export const notificationService = {
 export const resultService = {
   async listAssessmentResults(assessmentId) {
     return request(`/assessments/${assessmentId}/results`);
+  },
+
+  async listMyResults() {
+    return request("/me/results");
   },
 
   async releaseGrades(assessmentId) {

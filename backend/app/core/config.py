@@ -13,6 +13,16 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-secret-change-me"
     codewars_base_url: str = "https://www.codewars.com/api/v1"
 
+    # Email / SMTP settings for invitation emails.
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    sender_email: str = "noreply@smartrecruiter.com"
+    sender_name: str = "Smart Recruiter"
+    frontend_base_url: str = "http://localhost:5173"
+
     class Config:
         env_file = ".env"
 

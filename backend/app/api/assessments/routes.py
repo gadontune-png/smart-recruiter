@@ -4,8 +4,10 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_recruiter
 from app.models.assessments.assessment import Assessment, AssessmentStatus
+from app.models.attempts.attempt import Attempt
 from app.models.questions.question import Question
 from app.models.questions.option import QuestionOption
+from app.models.results.result import Result
 from app.models.user import User
 from app.schemas.assessment import AssessmentCreate, AssessmentUpdate, AssessmentOut, AssessmentDetailOut
 from app.schemas.question import QuestionCreate, QuestionOut
@@ -91,9 +93,30 @@ def delete_assessment(
     current_user: User = Depends(require_recruiter),
 ):
     assessment = _get_owned_assessment(assessment_id, current_user, db)
-    db.delete(assessment)
+    all_submitted = (
+        db.query(Attempt)
+        .filter(
+            Attempt.assessment_id == assessment_id,
+            Attempt.status.in_(["SUBMITTED", "AUTO_SUBMITTED"]),
+        )
+        .count()
+    )
+    has_results = (
+        db.query(Result)
+        .filter(Result.assessment_id == assessment_id)
+        .count()
+    )
+    if all_submitted == 0 and has_results == 0:
+        db.delete(assessment)
+        db.commit()
+        return {"detail": "Assessment deleted"}
+    assessment.status = AssessmentStatus.ARCHIVED
     db.commit()
-    return {"detail": "Assessment deleted"}
+    db.refresh(assessment)
+    return {
+        "detail": "Assessment archived. Results and history are preserved.",
+        "assessment": assessment,
+    }
 
 
 @router.post("/{assessment_id}/publish", response_model=AssessmentOut)
@@ -121,7 +144,6 @@ def add_question(
     assessment = _get_owned_assessment(assessment_id, current_user, db)
     data = payload.model_dump()
     options_data = data.pop("options", [])
-    data.pop("difficulty", None)
     data.pop("assessment_id", None)
     question = Question(**data, assessment_id=assessment_id)
     db.add(question)

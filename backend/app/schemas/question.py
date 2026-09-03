@@ -22,7 +22,7 @@ class QuestionCreate(BaseModel):
     assessment_id: Optional[int] = None
     question_text: str
     question_type: str
-    points: int = 0
+    points: int = Field(0, ge=0, le=100)
     order_number: int = 0
     description: Optional[str] = None
     starter_code: Optional[str] = None
@@ -35,7 +35,7 @@ class QuestionCreate(BaseModel):
 class QuestionUpdate(BaseModel):
     question_text: Optional[str] = None
     question_type: Optional[str] = None
-    points: Optional[int] = None
+    points: Optional[int] = Field(None, ge=0, le=100)
     order_number: Optional[int] = None
     description: Optional[str] = None
     starter_code: Optional[str] = None
@@ -57,6 +57,7 @@ class QuestionOut(BaseModel):
     starter_code: Optional[str] = None
     language: Optional[str] = None
     timelimit_seconds: Optional[int] = None
+    difficulty: Optional[str] = None
     options: List[QuestionOptionOut] = []
     created_at: datetime
     updated_at: Optional[datetime] = None

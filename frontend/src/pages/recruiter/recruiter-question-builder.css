@@ -137,9 +137,28 @@
 
 .qb-editor-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-6);
+}
+
+.qb-save-status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-right: auto;
+}
+
+.qb-save-status.saving {
+  color: var(--color-primary);
+}
+
+.qb-save-status.saved {
+  color: var(--color-success);
+}
+
+.qb-save-status.error {
+  color: var(--color-danger);
 }
 
 @media (max-width: 1023px) {

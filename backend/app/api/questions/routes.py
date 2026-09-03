@@ -42,7 +42,6 @@ def create_question(
 ):
     data = payload.model_dump()
     options_data = data.pop("options", [])
-    data.pop("difficulty", None)
     if not data.get("assessment_id"):
         raise HTTPException(status_code=400, detail="assessment_id is required")
     question = Question(**{k: v for k, v in data.items() if k in Question.__table__.columns.keys()})
@@ -51,7 +50,7 @@ def create_question(
     for option_data in options_data:
         question.options.append(
             QuestionOption(
-                option_text=option_data.option_text,
+                option_text=option_data["option_text"],
                 is_correct=option_data.get("is_correct", False),
             )
         )

@@ -10,6 +10,7 @@ class AssessmentCreate(BaseModel):
     title: str
     description: Optional[str] = None
     time_limit_minutes: int = 60
+    max_attempts: int = 1
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
@@ -18,6 +19,7 @@ class AssessmentUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     time_limit_minutes: Optional[int] = None
+    max_attempts: Optional[int] = None
     status: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -31,6 +33,7 @@ class AssessmentOut(BaseModel):
     title: str
     description: Optional[str] = None
     time_limit_minutes: int
+    max_attempts: int
     status: str
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

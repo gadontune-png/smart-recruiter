@@ -22,6 +22,7 @@ class Assessment(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     time_limit_minutes = Column(Integer, nullable=False)
+    max_attempts = Column(Integer, nullable=False, default=1)
     status = Column(String(9), nullable=False, default=AssessmentStatus.DRAFT)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Bell, Check } from "lucide-react";
+import { Bell, Check, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import {
   invitationService,
   notificationService,
+  attemptService,
 } from "../../services/assessmentService";
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
@@ -18,13 +19,29 @@ function IntervieweeAssessmentsPage() {
 
   const [invitations, setInvitations] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [attemptStatus, setAttemptStatus] = useState({});
   const [showNotifications, setShowNotifications] = useState(false);
   const [confirmation, setConfirmation] = useState("");
 
   useEffect(() => {
     invitationService
       .listInvitations()
-      .then((data) => setInvitations(Array.isArray(data) ? data : []))
+      .then(async (data) => {
+        const list = Array.isArray(data) ? data : [];
+        setInvitations(list);
+        const statuses = {};
+        await Promise.all(
+          list
+            .filter((inv) => inv.status === "ACCEPTED")
+            .map(async (inv) => {
+              const res = await attemptService
+                .getAttemptStatus(inv.assessment_id)
+                .catch(() => null);
+              if (res) statuses[inv.assessment_id] = res;
+            })
+        );
+        setAttemptStatus(statuses);
+      })
       .catch(() => setInvitations([]));
   }, []);
 
@@ -39,6 +56,29 @@ function IntervieweeAssessmentsPage() {
   const unreadCount = notifications.filter(
     (notification) => !notification.is_read
   ).length;
+
+  const sortedInvitations = [...invitations].sort(
+    (a, b) =>
+      new Date(b.invited_at || 0).getTime() -
+      new Date(a.invited_at || 0).getTime()
+  );
+
+  const sortedNotifications = [...notifications].sort(
+    (a, b) =>
+      new Date(b.created_at || 0).getTime() -
+      new Date(a.created_at || 0).getTime()
+  );
+
+  const isSubmitted = (invitation) =>
+    attemptStatus[invitation.assessment_id]?.locked &&
+    !attemptStatus[invitation.assessment_id]?.active;
+
+  const attemptUsed = (invitation) =>
+    attemptStatus[invitation.assessment_id]?.max_attempts > 0
+      ? `${attemptStatus[invitation.assessment_id]?.used_attempts ?? 0}/${attemptStatus[invitation.assessment_id]?.max_attempts} attempt${
+          attemptStatus[invitation.assessment_id]?.max_attempts === 1 ? "" : "s"
+        } used`
+      : "";
 
   function acceptInvitation(invitationId) {
     invitationService
@@ -113,7 +153,7 @@ function IntervieweeAssessmentsPage() {
                   description="You're all caught up."
                 />
               ) : (
-                notifications.map((notification) => (
+                sortedNotifications.map((notification) => (
                   <div
                     key={notification.notification_id}
                     className={`notification-item ${
@@ -157,22 +197,28 @@ function IntervieweeAssessmentsPage() {
           />
         ) : (
           <div className="invitation-list">
-            {invitations.map((invitation) => (
+            {sortedInvitations.map((invitation) => (
               <Card key={invitation.invitation_id} padded>
                 <div className="invitation-card">
                   <div className="invitation-content">
                     <div className="invitation-title-row">
-                      <h3>Assessment #{invitation.assessment_id}</h3>
+                      <h3>
+                        {invitation.title || `Assessment #${invitation.assessment_id}`}
+                      </h3>
                       <Badge
                         variant={
-                          invitation.status === "ACCEPTED"
+                          isSubmitted(invitation)
                             ? "success"
-                            : invitation.status === "EXPIRED"
-                              ? "danger"
-                              : "warning"
+                            : invitation.status === "ACCEPTED"
+                              ? "success"
+                              : invitation.status === "EXPIRED"
+                                ? "danger"
+                                : "warning"
                         }
                       >
-                        {invitation.status}
+                        {isSubmitted(invitation)
+                          ? "Submitted"
+                          : invitation.status}
                       </Badge>
                     </div>
 
@@ -192,11 +238,21 @@ function IntervieweeAssessmentsPage() {
                       <span>
                         <strong>Status:</strong> {invitation.status}
                       </span>
+                      {isSubmitted(invitation) && attemptUsed(invitation) && (
+                        <span>
+                          <strong>Attempts:</strong> {attemptUsed(invitation)}
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   <div className="invitation-actions">
-                    {invitation.status === "PENDING" ? (
+                    {isSubmitted(invitation) ? (
+                      <Button size="sm" disabled>
+                        <CheckCircle2 size={16} />
+                        Submitted
+                      </Button>
+                    ) : invitation.status === "PENDING" ? (
                       <Button
                         size="sm"
                         onClick={() =>
@@ -281,7 +337,7 @@ function IntervieweeAssessmentsPage() {
               description="You don't have any notifications yet."
             />
           ) : (
-            notifications.map((notification) => (
+            sortedNotifications.map((notification) => (
               <div
                 key={notification.notification_id}
                 className={`notification-row ${

@@ -16,6 +16,21 @@ def create_feedback(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_recruiter),
 ):
+    if payload.answer_id is None:
+        raise HTTPException(status_code=422, detail="answer_id is required")
+    existing = (
+        db.query(Feedback)
+        .filter(Feedback.answer_id == payload.answer_id)
+        .order_by(Feedback.feedback_id.asc())
+        .first()
+    )
+    if existing:
+        existing.comment = payload.comment
+        existing.score = payload.score
+        existing.recruiter_id = current_user.user_id
+        db.commit()
+        db.refresh(existing)
+        return existing
     feedback = Feedback(**payload.model_dump(), recruiter_id=current_user.user_id)
     db.add(feedback)
     db.commit()

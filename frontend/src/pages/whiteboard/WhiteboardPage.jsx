@@ -9,20 +9,25 @@ import {
   Plus,
   Send,
   Clock,
-  ArrowLeft,
-  Code,
-FileText,
+ArrowLeft,
+  FileText,
   Terminal,
   Lightbulb,
   Info,
   AlertCircle,
   CheckCircle,
   Zap,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { Select } from "../../components/forms";
-import { submissionService, attemptService } from "../../services/assessmentService";
+import {
+  submissionService,
+  attemptService,
+  assessmentService,
+} from "../../services/assessmentService";
 import "./WhiteboardPage.css";
 
 const LANGUAGES = [
@@ -42,9 +47,11 @@ function WhiteboardPage() {
   const [fontSize, setFontSize] = useState(14);
   const [ran, setRan] = useState(false);
   const [running, setRunning] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const [question, setQuestion] = useState(null);
+  const [questionList, setQuestionList] = useState([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answeredSet, setAnsweredSet] = useState(new Set());
   const [attemptId, setAttemptId] = useState(null);
   const [testCases, setTestCases] = useState([]);
   const [runOutput, setRunOutput] = useState("");
@@ -54,29 +61,175 @@ function WhiteboardPage() {
   const [customOutput, setCustomOutput] = useState("");
   const [showCustomTest, setShowCustomTest] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [totalTime, setTotalTime] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [locked, setLocked] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState("");
   const timerRef = useRef(null);
+
+  const applyQuestion = (q) => {
+    if (!q) return;
+    setQuestion(q);
+    if (q.starter_code) {
+      setCode(q.starter_code);
+    } else {
+      setCode("");
+    }
+  };
+
+  const selectQuestion = (index) => {
+    if (index < 0 || index >= questionList.length) return;
+    setQuestionIndex(index);
+    applyQuestion(questionList[index]);
+    setTestCases([]);
+    setRunOutput("");
+    setRunStatus(null);
+    setRunError("");
+    setRan(false);
+    setShowCustomTest(false);
+  };
+
+  const parseDescription = (raw) => {
+    const blocks = [];
+    let currentText = [];
+    const flushText = () => {
+      if (currentText.length) {
+        blocks.push({ type: "text", lines: currentText });
+        currentText = [];
+      }
+    };
+    const lines = (raw || "").split("\n");
+    let inCode = false;
+    for (const line of lines) {
+      const fence = line.match(/^\s*```+/);
+      if (fence) {
+        if (!inCode) {
+          flushText();
+          blocks.push({ type: "code", lines: [] });
+          inCode = true;
+        } else {
+          inCode = false;
+        }
+        continue;
+      }
+      if (inCode) {
+        blocks[blocks.length - 1].lines.push(line);
+      } else {
+        currentText.push(line);
+      }
+    }
+    flushText();
+    return blocks;
+  };
+
+  const renderInline = (text) => {
+    const parts = String(text).split(/(`[^`]+`)/g);
+    return parts.map((part, i) =>
+      part.startsWith("`") && part.endsWith("`") ? (
+        <code key={i} className="inline-code">
+          {part.slice(1, -1)}
+        </code>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const renderTextLine = (line, i) => {
+    const t = line.trim();
+    if (!t) return <br key={i} />;
+    const heading = t.match(/^(#{1,4})\s+(.*)$/);
+    if (heading) {
+      if (/^examples?$/i.test(heading[2])) {
+        return null;
+      }
+      return (
+        <div key={i} className="md-heading">
+          {renderInline(heading[2])}
+        </div>
+      );
+    }
+    if (/^[-*]\s+/.test(t)) {
+      return (
+        <li key={i} className="md-list-item">
+          {renderInline(t.replace(/^[-*]\s+/, ""))}
+        </li>
+      );
+    }
+    return (
+      <p key={i} className="md-paragraph">
+        {renderInline(line)}
+      </p>
+    );
+  };
 
   useEffect(() => {
     async function loadQuestion() {
       try {
         setLoading(true);
-        if (assessmentId) {
-          const attempt = await attemptService.startAttempt(assessmentId);
-          setAttemptId(attempt?.id ?? attempt?.attempt_id ?? null);
-          if (typeof attempt?.remaining_seconds === "number") {
-            setTimeLeft(attempt.remaining_seconds);
-          }
-          const questionList = await attemptService.getQuestions(assessmentId);
-          if (questionList && questionList.length > 0) {
-            setQuestion(questionList[0]);
-            if (questionList[0].starter_code) {
-              setCode(questionList[0].starter_code);
-            }
+        if (!assessmentId) return;
+
+        let attempt = null;
+        let attemptError = "";
+        try {
+          attempt = await attemptService.startAttempt(assessmentId);
+        } catch (err) {
+          attemptError = err?.message || "Failed to start attempt";
+        }
+
+        const status = await attemptService
+          .getAttemptStatus(assessmentId)
+          .catch(() => null);
+        if (status?.locked && !status?.active) {
+          setLocked(true);
+          setLoading(false);
+          return;
+        }
+
+        setAttemptId(attempt?.id ?? attempt?.attempt_id ?? null);
+        if (typeof attempt?.remaining_seconds === "number") {
+          setTimeLeft(attempt.remaining_seconds);
+        }
+
+        const assess = await assessmentService
+          .getAssessment(assessmentId)
+          .catch(() => null);
+        if (assess?.time_limit_minutes) {
+          const total = assess.time_limit_minutes * 60;
+          setTotalTime(total);
+          if (attempt?.remaining_seconds == null) {
+            setTimeLeft(total);
           }
         }
+
+        let questionList = null;
+        try {
+          questionList = await attemptService.getQuestions(assessmentId);
+        } catch (err) {
+          if (!attemptError) {
+            attemptError = err?.message || "Failed to load questions";
+          }
+        }
+
+        const list = (questionList && questionList.length > 0)
+          ? questionList
+          : (assess?.questions || []);
+        if (list.length > 0) {
+          setQuestionList(list);
+          setQuestionIndex(0);
+          applyQuestion(list[0]);
+          if (attemptError) setLoadError(attemptError);
+          return;
+        }
+
+        setLoadError(
+          attemptError ||
+            "This assessment has no questions or your attempt is no longer active."
+        );
       } catch (err) {
         console.error("Failed to load question:", err);
+        setLoadError(err?.message || "Failed to load question");
       } finally {
         setLoading(false);
       }
@@ -102,40 +255,107 @@ function WhiteboardPage() {
 
   const handleCodeChange = (value) => {
     setCode(value);
+    if (value.trim() && question?.question_id) {
+      setAnsweredSet((prev) => new Set(prev).add(question.question_id));
+    }
     persistCode(value);
   };
 
-  const handleSubmit = useCallback(async () => {
-    if (!code.trim()) return;
-    try {
-      if (attemptId) {
-        await attemptService.submitAttempt(attemptId);
-      } else {
-        await submissionService.runCode({ code, language });
-      }
-    } catch (err) {
-      setRunError(err.message || "Failed to submit solution");
-      return;
+  const getNextUnansweredIndex = (fromIndex) => {
+    const n = questionList.length;
+    for (let i = fromIndex + 1; i < n; i++) {
+      const q = questionList[i];
+      if (q?.question_id && !answeredSet.has(q.question_id)) return i;
     }
-    setSubmitted(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-  }, [code, language, attemptId]);
+    for (let i = 0; i < fromIndex; i++) {
+      const q = questionList[i];
+      if (q?.question_id && !answeredSet.has(q.question_id)) return i;
+    }
+    return -1;
+  };
+
+  const ensureAttempt = async () => {
+    let currentAttemptId = attemptId;
+    if (!currentAttemptId) {
+      const attempt = await attemptService.startAttempt(assessmentId);
+      currentAttemptId = attempt?.id ?? attempt?.attempt_id ?? null;
+      if (currentAttemptId) setAttemptId(currentAttemptId);
+    }
+    return currentAttemptId;
+  };
+
+  const isFinalQuestion = questionList.length <= 1;
+  const allAnswered =
+    questionList.length > 0 &&
+    questionList.every((q) => answeredSet.has(q.question_id));
+
+  const handleSubmit = useCallback(
+    async ({ final = false, force = false } = {}) => {
+      if (!force && !code.trim()) {
+        setRunError("Write a solution before submitting.");
+        return;
+      }
+      if (locked) return;
+      setRunning(true);
+      try {
+        const currentAttemptId = await ensureAttempt();
+        if (!currentAttemptId) {
+          setRunError("Could not start an attempt. Please try again.");
+          return;
+        }
+        if (isFinalQuestion || final) {
+          await attemptService.submitAttempt(currentAttemptId);
+          clearInterval(timerRef.current);
+          navigate("/interviewee/dashboard");
+          return;
+        }
+        await attemptService.saveAnswer(currentAttemptId, {
+          question_id: question?.question_id,
+          code_submission: code,
+          programming_language: language,
+        });
+        if (question?.question_id) {
+          setAnsweredSet((prev) => new Set(prev).add(question.question_id));
+        }
+        const next = getNextUnansweredIndex(questionIndex);
+        if (next === -1) {
+          setSubmitMsg(
+            "All questions answered. Press “Final Submit Assessment” to complete."
+          );
+          return;
+        }
+        selectQuestion(next);
+        setSubmitMsg(`Solution saved. Next: Question ${next + 1}`);
+      } catch (err) {
+        setRunError(err?.message || "Failed to submit solution");
+      } finally {
+        setRunning(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [code, attemptId, locked, assessmentId, question, questionIndex, questionList, answeredSet, language]
+  );
+
+  const handleSubmitRef = useRef(handleSubmit);
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
 
   useEffect(() => {
-    if (timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            handleSubmit();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    if (timeLeft <= 0) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : prev));
+    }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [timeLeft, handleSubmit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft > 0]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && totalTime > 0 && !locked) {
+      handleSubmitRef.current({ final: true, force: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft]);
 
   const lines = code.split("\n");
 
@@ -186,7 +406,7 @@ function WhiteboardPage() {
   };
 
   const toggleFont = (delta) => {
-    setFontSize((size) => Math.min(20, Math.min(11, size + delta)));
+    setFontSize((size) => Math.max(11, Math.min(20, size + delta)));
   };
 
   if (loading) {
@@ -221,7 +441,10 @@ function WhiteboardPage() {
         <div className="whiteboard-complete">
           <Badge variant="warning">No Question</Badge>
           <h1>No question available</h1>
-          <p>There is no question loaded for this assessment.</p>
+          <p>
+            {loadError ||
+              "There is no question loaded for this assessment or your attempt is locked."}
+          </p>
           <div className="whiteboard-complete-actions">
             <Button onClick={() => navigate("/interviewee/assessments")}>
               Back to Assessments
@@ -232,7 +455,7 @@ function WhiteboardPage() {
     );
   }
 
-  if (submitted) {
+  if (locked) {
     return (
       <div className="whiteboard-page">
         <div className="whiteboard-toolbar">
@@ -245,11 +468,14 @@ function WhiteboardPage() {
         </div>
         <div className="whiteboard-complete">
           <Badge variant="success">Submitted</Badge>
-          <h1>Solution Submitted!</h1>
-          <p>Your code solution has been submitted successfully.</p>
+          <h1>Assessment already submitted</h1>
+          <p>
+            You have already completed this assessment. It is locked for further
+            attempts.
+          </p>
           <div className="whiteboard-complete-actions">
-            <Button onClick={() => navigate("/interviewee/assessments")}>
-              Back to Assessments
+            <Button onClick={() => navigate("/interviewee/results")}>
+              View My Results
             </Button>
             <Button variant="secondary" onClick={() => navigate("/interviewee/dashboard")}>
               Dashboard
@@ -272,11 +498,16 @@ function WhiteboardPage() {
             <ArrowLeft size={16} />
           </Button>
           <div className="wb-problem-badge">
-            <Badge variant="primary">
+            <span className="wb-problem-title">
               {question?.question_text || "Question"}
-            </Badge>
+            </span>
             <span className="wb-problem-meta">
               {question?.difficulty || ""} · {question?.points || 0} pts
+              {questionList.length > 1 && (
+                <span className="wb-question-count">
+                  · Q{questionIndex + 1}/{questionList.length}
+                </span>
+              )}
             </span>
           </div>
         </div>
@@ -303,23 +534,20 @@ function WhiteboardPage() {
         </div>
 
         <div className="wb-toolbar-right">
-          {timeLeft > 0 && (
-            <div className={`wb-timer ${timeLeft < 60 ? "warning" : ""}`}>
-              <Clock size={14} />
-              {formatTime(timeLeft)}
-            </div>
-          )}
+          <div className={`wb-timer ${timeLeft < 60 ? "warning" : ""}`}>
+            <Clock size={14} />
+            <span className="wb-timer-value">{formatTime(timeLeft)}</span>
+            {totalTime > 0 && (
+              <span className="wb-timer-total">/ {Math.floor(totalTime / 60)} min</span>
+            )}
+          </div>
           <Button variant="ghost" onClick={handleReset}>
             <RotateCcw size={16} />
             Reset
           </Button>
-          <Button variant="secondary" onClick={handleRunCode} disabled={running}>
+          <Button variant="secondary" onClick={() => handleRunCode()} disabled={running}>
             <Play size={16} />
             Run Code
-          </Button>
-          <Button className="wb-submit-btn" onClick={handleSubmit}>
-            <Send size={16} />
-            Submit Solution
           </Button>
         </div>
       </div>
@@ -336,6 +564,48 @@ function WhiteboardPage() {
             <Badge variant="primary">{question?.difficulty || ""}</Badge>
           </div>
 
+          {questionList.length > 0 && (
+            <div className="question-navigator">
+              <button
+                type="button"
+                className="wb-nav-btn"
+                disabled={questionIndex === 0}
+                onClick={() => selectQuestion(questionIndex - 1)}
+                aria-label="Previous question"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="wb-nav-pills">
+                {questionList.map((q, index) => {
+                  const isAnswered =
+                    q.question_id && answeredSet.has(q.question_id);
+                  return (
+                    <button
+                      key={q.question_id ?? index}
+                      type="button"
+                      className={`wb-nav-pill ${
+                        index === questionIndex ? "active" : ""
+                      } ${isAnswered ? "answered" : ""}`}
+                      onClick={() => selectQuestion(index)}
+                      title={q.question_text || `Question ${index + 1}`}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                className="wb-nav-btn"
+                disabled={questionIndex === questionList.length - 1}
+                onClick={() => selectQuestion(questionIndex + 1)}
+                aria-label="Next question"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+
           <div className="question-content">
             <h1 className="question-title">{question?.question_text || ""}</h1>
 
@@ -349,55 +619,61 @@ function WhiteboardPage() {
             </div>
 
             <div className="question-section">
-              <h3 className="question-section-title">Description</h3>
-              <p className="question-description">
-                {question?.description || ""}
-              </p>
+              <h3 className="question-section-title">
+                <span className="section-dot" /> Description
+              </h3>
+              <div className="question-description">
+                {(() => {
+                  const blocks = parseDescription(question?.description || "");
+                  return blocks
+                    .filter((b) => b.type === "text")
+                    .map((block, bi) => (
+                      <div key={bi} className="md-block">
+                        {block.lines.map((line, i) => renderTextLine(line, i))}
+                      </div>
+                    ));
+                })()}
+              </div>
             </div>
 
-            <div className="question-section">
-              <h3 className="question-section-title">Examples</h3>
-              {(question?.examples || []).map((example, index) => (
-                <div className="question-example" key={index}>
-                  <div className="example-label">Example {index + 1}</div>
-                  <div className="example-input">Input: {example.input}</div>
-                  <div className="example-output">Output: {example.output}</div>
-                  {example.explanation && (
-                    <div className="example-explanation">{example.explanation}</div>
-                  )}
+            {(() => {
+              const codeBlocks = parseDescription(question?.description || "").filter(
+                (b) => b.type === "code"
+              );
+              if (codeBlocks.length === 0) return null;
+              return (
+                <div className="question-section">
+                  <h3 className="question-section-title">
+                    <span className="section-dot" /> Examples
+                  </h3>
+                  {codeBlocks.map((block, index) => (
+                    <div className="example-card" key={index}>
+                      <div className="example-card-head">
+                        <span className="example-card-bullets" aria-hidden="true">
+                          <i /><i /><i />
+                        </span>
+                        <span className="example-card-label">Example {index + 1}</span>
+                        <FileText size={13} />
+                      </div>
+                      <pre className="example-card-code">
+                        {block.lines.length ? (
+                          block.lines.join("\n")
+                        ) : (
+                          "// example"
+                        )}
+                      </pre>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <div className="question-section">
-              <h3 className="question-section-title">Constraints</h3>
-              <ul className="question-constraints">
-                {(question?.constraints || []).map((constraint, index) => (
-                  <li key={index}>
-                    <CheckCircle size={12} style={{ display: "inline", marginRight: 6, color: "var(--color-success)" }} />
-                    {constraint}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              );
+            })()}
 
             {question?.starter_code && (
               <div className="question-section">
                 <h3 className="question-section-title">
-                  <Code size={14} style={{ display: "inline", marginRight: 8, verticalAlign: "middle" }} />
-                  Starter Code
+                  <span className="section-dot" /> Starter Code
                 </h3>
-                <pre
-                  style={{
-                    background: "var(--editor-bg)",
-                    padding: "var(--space-3)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "var(--font-size-sm)",
-                    overflow: "auto",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
+                <pre className="example-card-code starter-code">
                   {question.starter_code}
                 </pre>
               </div>
@@ -473,7 +749,7 @@ function WhiteboardPage() {
 
           <div className="code-editor-wrapper">
             <div className={`code-editor ${running ? "running" : ""}`}>
-              <div className="code-gutter">
+              <div className="code-gutter" style={{ fontSize: `${fontSize}px` }}>
                 {lines.map((_, index) => (
                   <div key={index}>{index + 1}</div>
                 ))}
@@ -486,13 +762,6 @@ function WhiteboardPage() {
                 style={{ fontSize: `${fontSize}px` }}
                 aria-label="Code editor"
               />
-              <div className="code-overlay" aria-hidden="true">
-                <div style={{ fontSize: `${fontSize}px` }}>
-                  {lines.map((line, index) => (
-                    <pre key={index}>{line || " "}</pre>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
 
@@ -554,18 +823,29 @@ function WhiteboardPage() {
               <RotateCcw size={16} />
               Reset
             </Button>
-            <Button onClick={handleRunCode} disabled={running}>
+            <Button onClick={() => handleRunCode()} disabled={running}>
               <Play size={16} />
               Run Code
             </Button>
             <Button
-              onClick={handleSubmit}
+              className="wb-submit-btn"
+              onClick={() => handleSubmit({ final: isFinalQuestion || allAnswered })}
+              disabled={running}
               style={{ marginLeft: "auto" }}
             >
               <Send size={16} />
-              Submit Solution
+              {running
+                ? "Submitting..."
+                : isFinalQuestion || allAnswered
+                ? "Final Submit Assessment"
+                : "Submit Solution"}
             </Button>
           </div>
+          {submitMsg && (
+            <p className="wb-submit-msg">
+              <CheckCircle2 size={14} style={{ verticalAlign: "middle" }} /> {submitMsg}
+            </p>
+          )}
         </section>
 
         {/* ===== RIGHT: Test Cases ===== */}
