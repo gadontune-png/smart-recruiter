@@ -7,14 +7,17 @@ import {
   Trophy,
   CalendarClock,
   Gauge,
+  RotateCcw,
 } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../components/common/Toast";
 import {
   invitationService,
   notificationService,
   assessmentService,
+  attemptService,
 } from "../../services/assessmentService";
 import { ROUTES } from "../../utils/constants";
 import "./interviewee-dashboard.css";
@@ -34,10 +37,11 @@ function timeAgo(dateStr) {
 function IntervieweeDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [invitations, setInvitations] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [assessments, setAssessments] = useState([]);
+  const [attemptStatus, setAttemptStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -52,9 +56,47 @@ function IntervieweeDashboardPage() {
           assessmentService.listAssessments(),
         ]);
 
-        setInvitations(Array.isArray(invData) ? invData : []);
-        setNotifications(Array.isArray(notifData) ? notifData : []);
+        const invs = Array.isArray(invData) ? invData : [];
+        const notifs = Array.isArray(notifData) ? notifData : [];
+        setInvitations(invs);
         setAssessments(Array.isArray(assessData) ? assessData : []);
+
+        let seen = [];
+        try {
+          seen = JSON.parse(localStorage.getItem("gradeToastSeen") || "[]");
+          if (!Array.isArray(seen)) seen = [];
+        } catch {
+          seen = [];
+        }
+        notifs
+          .filter(
+            (n) =>
+              !n.is_read &&
+              (n.notification_type === "result" ||
+                /result|grade/i.test(n.title))
+          )
+          .forEach((n) => {
+            if (!seen.includes(String(n.notification_id))) {
+              toast.success("Result reviewed and graded!", {
+                duration: 6000,
+              });
+              seen.push(String(n.notification_id));
+            }
+          });
+        localStorage.setItem("gradeToastSeen", JSON.stringify(seen));
+
+        const statuses = {};
+        await Promise.all(
+          invs
+            .filter((inv) => inv.status === "ACCEPTED")
+            .map(async (inv) => {
+              const data = await attemptService
+                .getAttemptStatus(inv.assessment_id)
+                .catch(() => null);
+              if (data) statuses[inv.assessment_id] = data;
+            })
+        );
+        setAttemptStatus(statuses);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -73,8 +115,23 @@ function IntervieweeDashboardPage() {
     .map((inv) => {
       const assessment = assessments.find((a) => a.assessment_id === inv.assessment_id);
       const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date();
-      return { ...inv, assessment, isExpired };
-    });
+      const st = attemptStatus[inv.assessment_id];
+      const attemptState =
+        inv.status === "PENDING"
+          ? "pending"
+          : st?.locked
+            ? "completed"
+            : st?.active
+              ? "in-progress"
+              : (st?.used_attempts || 0) > 0
+                ? "retry"
+                : "ready";
+      return { ...inv, assessment, isExpired, attemptState, attempt: st };
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.invited_at || 0).getTime() - new Date(a.invited_at || 0).getTime()
+    );
 
   const stats = [
     { label: "Assessments Completed", value: String(completedCount), delta: completedCount > 0 ? "Ready for review" : "No completed assessments yet", icon: CheckCircle2 },
@@ -83,11 +140,25 @@ function IntervieweeDashboardPage() {
     { label: "Global Rank", value: "N/A", delta: "Complete assessments to earn a rank", icon: Trophy },
   ];
 
-  const activities = notifications.slice(0, 5).map((notif) => ({
-    text: notif.message,
-    time: timeAgo(notif.created_at),
-    tone: notif.type === "invitation" ? "info" : notif.type === "result" ? "success" : "neutral",
-  }));
+  const activities = invitations
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.invited_at || 0).getTime() - new Date(a.invited_at || 0).getTime()
+    )
+    .slice(0, 5)
+    .map((inv) => ({
+      text: inv.title
+        ? `Invited to "${inv.title}"`
+        : `Invited to assessment #${inv.assessment_id}`,
+      time: timeAgo(inv.invited_at),
+      invitedAt: inv.invited_at,
+      tone: inv.status === "ACCEPTED" ? "success" : "info",
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.invitedAt || 0).getTime() - new Date(a.invitedAt || 0).getTime()
+    );
 
   if (loading) {
     return (
@@ -161,29 +232,61 @@ function IntervieweeDashboardPage() {
               </div>
             )}
             {upcoming.map((item) => (
-              <div className="panel upcoming-card" key={item.id}>
+              <div className="panel upcoming-card" key={item.invitation_id}>
                 <div className="upcoming-card-top">
-                  <h3>{item.assessment?.title || `Assessment #${item.assessment_id}`}</h3>
+                  <h3>{item.title || `Assessment #${item.assessment_id}`}</h3>
                   {(item.isExpired || item.status === "EXPIRED") && (
                     <Badge variant="neutral"><Lock size={12} /> Expired</Badge>
                   )}
-                  {item.status === "ACCEPTED" && (
-                    <Badge variant="info"><ArrowRight size={12} /> Accepted</Badge>
+                  {item.status === "PENDING" && (
+                    <Badge variant="warning"><ArrowRight size={12} /> Pending Acceptance</Badge>
+                  )}
+                  {item.status === "ACCEPTED" && item.attemptState === "ready" && (
+                    <Badge variant="info"><ArrowRight size={12} /> Ready</Badge>
+                  )}
+                  {item.attemptState === "in-progress" && (
+                    <Badge variant="warning"><ArrowRight size={12} /> In Progress</Badge>
+                  )}
+                  {item.attemptState === "retry" && (
+                    <Badge variant="warning"><RotateCcw size={12} /> Try Again</Badge>
+                  )}
+                  {item.attemptState === "completed" && (
+                    <Badge variant="success"><CheckCircle2 size={12} /> Submitted</Badge>
                   )}
                 </div>
                 <p className="upcoming-meta">
-                  {item.scheduled_at && `Scheduled: ${new Date(item.scheduled_at).toLocaleString()}`}
+                  {item.invited_at && `Invited: ${new Date(item.invited_at).toLocaleDateString()}`}
                   {item.assessment?.time_limit_minutes && ` · Duration: ${item.assessment.time_limit_minutes} mins`}
                   {item.assessment?.description && ` · ${item.assessment.description}`}
+                  {item.attempt?.max_attempts > 0 &&
+                    ` · ${item.attempt.used_attempts}/${item.attempt.max_attempts} attempt${item.attempt.max_attempts === 1 ? "" : "s"} used`}
                 </p>
                 {item.isExpired || item.status === "EXPIRED" ? (
                   <Button variant="secondary" disabled>
                     <Lock size={16} />
                     Expired
                   </Button>
+                ) : item.attemptState === "completed" ? (
+                  <Button variant="secondary" disabled>
+                    <CheckCircle2 size={16} />
+                    Submitted
+                  </Button>
+                ) : item.attemptState === "retry" ? (
+                  <Button onClick={() => navigate(ROUTES.ASSESSMENT.replace(":id", item.assessment_id))}>
+                    <RotateCcw size={16} />
+                    Try Again <ArrowRight size={16} />
+                  </Button>
+                ) : item.status === "PENDING" ? (
+                  <Button
+                    onClick={() =>
+                      navigate(ROUTES.INTERVIEWEE.ASSESSMENTS)
+                    }
+                  >
+                    Accept Invitation <ArrowRight size={16} />
+                  </Button>
                 ) : (
                   <Button onClick={() => navigate(ROUTES.ASSESSMENT.replace(":id", item.assessment_id))}>
-                    Start <ArrowRight size={16} />
+                    {item.attemptState === "in-progress" ? "Resume" : "Start"} <ArrowRight size={16} />
                   </Button>
                 )}
               </div>

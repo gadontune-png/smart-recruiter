@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UploadCloud, Mail, UserPlus } from "lucide-react";
+import { UploadCloud, Mail, X } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { Input, Select } from "../../components/forms";
@@ -8,15 +8,19 @@ import "./recruiter.css";
 import "./recruiter-invitations.css";
 
 const STATUS_TONES = { PENDING: "warning", ACCEPTED: "success", EXPIRED: "neutral" };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function RecruiterInvitationsPage() {
   const [filter, setFilter] = useState("All");
-  const [intervieweeId, setIntervieweeId] = useState("");
-  const [added, setAdded] = useState([]);
+  const [emails, setEmails] = useState([]);
+  const [emailInput, setEmailInput] = useState("");
+  const [bulkEmailsText, setBulkEmailsText] = useState("");
   const [invitations, setInvitations] = useState([]);
   const [assessments, setAssessments] = useState([]);
   const [selectedAssessment, setSelectedAssessment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const statuses = ["All", "PENDING", "ACCEPTED", "EXPIRED"];
 
@@ -43,30 +47,80 @@ function RecruiterInvitationsPage() {
     }
   }
 
+  async function handleRevoke(invitationId) {
+    try {
+      await invitationService.revokeInvitation(invitationId);
+      setInvitations((prev) => prev.filter((inv) => inv.invitation_id !== invitationId));
+    } catch (err) {
+      console.error("Failed to revoke invitation", err);
+    }
+  }
+
   const rows = invitations.filter(
     (row) => filter === "All" || row.status === filter
   );
 
-  function handleAdd() {
-    if (!intervieweeId.trim()) return;
-    setAdded((current) => [...current, intervieweeId.trim()]);
-    setIntervieweeId("");
+  function handleAddEmail() {
+    const value = emailInput.trim();
+    if (!value) return;
+    if (!EMAIL_RE.test(value)) {
+      setError(`"${value}" is not a valid email address.`);
+      return;
+    }
+    setError("");
+    if (emails.includes(value.toLowerCase())) {
+      setEmailInput("");
+      return;
+    }
+    setEmails((current) => [...current, value.toLowerCase()]);
+    setEmailInput("");
   }
 
-  async function handleSendInvitation() {
-    if (!selectedAssessment || added.length === 0) return;
+  function handleAddBulkEmails() {
+    const text = bulkEmailsText.trim();
+    if (!text) return;
+    const parsed = text
+      .split(/[\s,;]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const valid = parsed.filter((e) => EMAIL_RE.test(e));
+    const invalid = parsed.filter((e) => !EMAIL_RE.test(e));
+    if (invalid.length) {
+      setError(`Invalid email(s): ${invalid.join(", ")}`);
+    } else {
+      setError("");
+    }
+    setEmails((current) => Array.from(new Set([...current, ...valid])));
+    setBulkEmailsText("");
+  }
+
+  function handleRemoveEmail(email) {
+    setEmails((current) => current.filter((e) => e !== email));
+  }
+
+  async function handleSendEmails() {
+    setError("");
+    setSuccess("");
+    if (!selectedAssessment) {
+      setError("Please select an assessment first.");
+      return;
+    }
+    if (emails.length === 0) {
+      setError("Add at least one candidate email before sending.");
+      return;
+    }
     setLoading(true);
     try {
-      for (const candidateId of added) {
-        await invitationService.createInvitation({
-          assessment_id: Number(selectedAssessment),
-          interviewee_id: Number(candidateId),
-        });
-      }
-      setAdded([]);
+      const created = await invitationService.createEmailBulkInvitations({
+        assessment_id: Number(selectedAssessment),
+        emails,
+      });
+      setEmails([]);
+      const count = Array.isArray(created) ? created.length : emails.length;
+      setSuccess(`${count} invitation${count === 1 ? "" : "s"} sent successfully.`);
       fetchInvitations();
     } catch (err) {
-      console.error("Failed to send invitations", err);
+      setError(err.message || "Failed to send invitations.");
     } finally {
       setLoading(false);
     }
@@ -76,14 +130,13 @@ function RecruiterInvitationsPage() {
     <div className="recruiter-invitations">
       <div className="page-header">
         <p className="breadcrumb">Smart Recruiter / Invitations / Send Invitations</p>
-        <h1>Manage Candidate Access</h1>
       </div>
 
       <div className="invite-columns">
         <section className="panel invite-card">
           <div className="panel-heading">
-            <h2>Invite Individual Candidates</h2>
-            <UserPlus size={18} className="panel-heading-icon" />
+            <h2>Manage Candidate Access</h2>
+            <Mail size={18} className="panel-heading-icon" />
           </div>
           <div className="panel-body">
             <Select
@@ -95,22 +148,61 @@ function RecruiterInvitationsPage() {
                 label: a.title,
               }))}
             />
-            <Input
-              label="Candidate ID"
-              value={intervieweeId}
-              onChange={(event) => setIntervieweeId(event.target.value)}
-              placeholder="e.g. 123"
-            />
-            <Button onClick={handleAdd}>Add</Button>
-            {added.length > 0 && (
+            <div className="email-add-row">
+              <Input
+                label="Candidate Email"
+                type="email"
+                value={emailInput}
+                onChange={(event) => setEmailInput(event.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddEmail();
+                  }
+                }}
+                placeholder="candidate@example.com"
+              />
+              <Button variant="secondary" onClick={handleAddEmail}>
+                Add
+              </Button>
+            </div>
+
+            <div className="bulk-emails">
+              <label className="form-label">Or paste multiple emails</label>
+              <textarea
+                className="bulk-emails-textarea"
+                value={bulkEmailsText}
+                onChange={(e) => setBulkEmailsText(e.target.value)}
+                placeholder="candidate1@example.com, candidate2@example.com, candidate3@example.com"
+                rows={3}
+              />
+              <Button size="sm" variant="ghost" onClick={handleAddBulkEmails}>
+                Add All
+              </Button>
+            </div>
+
+            {error && <p className="invite-error">{error}</p>}
+            {success && <p className="invite-success">{success}</p>}
+
+            {emails.length > 0 && (
               <>
                 <ul className="added-emails">
-                  {added.map((item) => (
-                    <li key={item}>{item}</li>
+                  {emails.map((item) => (
+                    <li key={item} className="email-chip">
+                      <span>{item}</span>
+                      <button
+                        type="button"
+                        className="email-chip-remove"
+                        aria-label={`Remove ${item}`}
+                        onClick={() => handleRemoveEmail(item)}
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
                   ))}
                 </ul>
-                <Button onClick={handleSendInvitation} disabled={loading}>
-                  {loading ? "Sending..." : "Send Invitations"}
+                <Button onClick={handleSendEmails} disabled={loading}>
+                  {loading ? "Sending..." : `Send ${emails.length} Invitation${emails.length > 1 ? "s" : ""}`}
                 </Button>
               </>
             )}
@@ -132,7 +224,7 @@ function RecruiterInvitationsPage() {
           </div>
         </section>
 
-        <section className="panel invite-card">
+        <section className="panel invite-card log-card">
           <div className="panel-heading">
             <h2>Sent Access Log</h2>
             <Badge variant="info">{rows.length} sent</Badge>
@@ -164,7 +256,12 @@ function RecruiterInvitationsPage() {
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.invitation_id}>
-                      <td className="cell-strong">Candidate #{row.interviewee_id}</td>
+                      <td className="cell-strong">
+                        {row.interviewee_name || row.interviewee_email || `Candidate #${row.interviewee_id}`}
+                        {row.interviewee_email && row.interviewee_email !== row.interviewee_name && (
+                          <div className="cell-sub">{row.interviewee_email}</div>
+                        )}
+                      </td>
                       <td>{assessments.find((a) => a.assessment_id === row.assessment_id)?.title || row.assessment_id}</td>
                       <td>{row.invited_at ? new Date(row.invited_at).toLocaleDateString() : "N/A"}</td>
                       <td>
@@ -173,7 +270,7 @@ function RecruiterInvitationsPage() {
                       <td>
                         <div className="row-actions">
                           <Button size="sm" variant="ghost">Resend</Button>
-                          <Button size="sm" variant="ghost" className="btn-danger-text">Revoke</Button>
+                          <Button size="sm" variant="ghost" className="btn-danger-text" onClick={() => handleRevoke(row.invitation_id)}>Revoke</Button>
                         </div>
                       </td>
                     </tr>
@@ -184,33 +281,6 @@ function RecruiterInvitationsPage() {
           </div>
         </section>
       </div>
-
-      {selectedAssessment && (
-        <section className="panel email-preview">
-          <div className="panel-heading">
-            <h2>Candidate Notification Preview <span className="email-tag">(Email Template)</span></h2>
-            <Mail size={18} className="panel-heading-icon" />
-          </div>
-          <div className="panel-body">
-            <div className="email-box">
-              <p className="email-subject">
-                <strong>Subject:</strong> You have been invited to complete a technical challenge for Smart Recruiter
-              </p>
-              <p className="email-greeting">Hi Candidate,</p>
-              <p className="email-body">
-                An engineer from our recruitment team has assigned you the {assessments.find((a) => String(a.assessment_id) === String(selectedAssessment))?.title || "Technical Challenge"}.
-                This assessment evaluates your engineering fundamentals and will take approximately
-                {assessments.find((a) => String(a.assessment_id) === String(selectedAssessment))?.time_limit_minutes || 60} minutes to complete. Please schedule a quiet window to focus on the challenge.
-              </p>
-              <Button>Start Technical Challenge</Button>
-              <p className="email-note">
-                Note: This invitation link is valid for 7 days. If you experience technical errors, please reach
-                out to candidates@smartrecruiter.com
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
 }

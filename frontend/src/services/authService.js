@@ -20,4 +20,11 @@ export const authService = {
   async getMe() {
     return request("/auth/me");
   },
+
+  async updateProfile(payload) {
+    return request("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
 };

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import {
-  invitationService,
   resultService,
+  feedbackService,
 } from "../../services/assessmentService";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
@@ -13,41 +13,35 @@ function IntervieweeResultsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [results, setResults] = useState([]);
+  const [feedbackMap, setFeedbackMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.user_id) return;
     let cancelled = false;
 
-    invitationService
-      .listInvitations()
-      .then(async (invitations) => {
-        const accepted = (invitations || []).filter(
-          (inv) => inv.status === "ACCEPTED"
-        );
-        const all = [];
-        for (const invitation of accepted) {
-          const data = await resultService
-            .listAssessmentResults(invitation.assessment_id)
+    resultService
+      .listMyResults()
+      .then(async (data) => {
+        const all = Array.isArray(data) ? data : [];
+        if (!cancelled) setResults(all);
+
+        const fbMap = {};
+        for (const r of all) {
+          const fb = await feedbackService
+            .getFeedbackForResult(r.id)
             .catch(() => []);
-          if (Array.isArray(data)) {
-            const mine = data
-              .filter(
-                (r) =>
-                  Number(r.interviewee_id) === Number(user.user_id) &&
-                  Boolean(r.grade_released)
-              )
-              .map((r) => ({
-                ...r,
-                assessment_title:
-                  r.assessment_title ||
-                  invitation.title ||
-                  `Assessment #${invitation.assessment_id}`,
-              }));
-            all.push(...mine);
+          if (Array.isArray(fb) && fb.length > 0) {
+            const seen = new Set();
+            fbMap[r.id] = fb.filter((item) => {
+              const key = item.answer_id ?? item.feedback_id;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
           }
         }
-        if (!cancelled) setResults(all);
+        if (!cancelled) setFeedbackMap(fbMap);
       })
       .catch(() => {
         if (!cancelled) setResults([]);
@@ -89,22 +83,67 @@ function IntervieweeResultsPage() {
         </div>
       ) : (
         <div className="result-card-list">
-          {results.map((result) => (
-            <div className="panel result-card" key={result.id}>
-              <div className="result-card-main">
-                <div>
-                  <h2>{result.assessment_title}</h2>
-                  <p className="result-meta">
-                    Completed on{" "}
-                    {result.calculated_at
-                      ? new Date(result.calculated_at).toLocaleDateString()
-                      : "N/A"}
-                  </p>
+          {results.map((result) => {
+            const score = Math.round(result.total_score);
+            const feedbackItems = feedbackMap[result.id] || [];
+            return (
+              <div className="panel result-card" key={result.id}>
+                <div className="result-card-head">
+                  <div className="result-card-title">
+                    <h2>{result.assessment_title}</h2>
+                    <p className="result-meta">
+                      Completed on{" "}
+                      {result.calculated_at
+                        ? new Date(result.calculated_at).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div
+                    className="score-circle score-tiny"
+                    style={{ "--score": `${score}%` }}
+                  >
+                    <div className="score-circle-inner">
+                      <strong>{score}%</strong>
+                      <span>Score</span>
+                    </div>
+                  </div>
                 </div>
-                <Badge variant="success">{Math.round(result.total_score)}%</Badge>
+
+                <div className="result-status-row">
+                  <div className="result-grade-badge">
+                    <Badge variant={score >= 60 ? "success" : "danger"}>
+                      {score >= 60 ? "Passed" : "Failed"}
+                    </Badge>
+                  </div>
+                  <span className="result-reviewed-tag">Reviewed &amp; graded by recruiter</span>
+                </div>
+
+                {feedbackItems.length > 0 && (
+                  <div className="result-feedback">
+                    <div className="result-feedback-head">
+                      <h3>Recruiter Feedback</h3>
+                    </div>
+                    {feedbackItems.map((fb) => (
+                      <div className="feedback-block" key={fb.feedback_id}>
+                        <p className="feedback-comment">{fb.comment}</p>
+                        {fb.score != null && (
+                          <div className="feedback-score">
+                            <Badge variant="info">Score {fb.score}</Badge>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {feedbackItems.length === 0 && (
+                  <p className="result-no-feedback">
+                    No written feedback from the recruiter.
+                  </p>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

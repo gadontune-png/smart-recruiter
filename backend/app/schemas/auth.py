@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,7 +24,7 @@ class UserRegister(BaseModel):
     full_name: str
     email: str
     password: str
-    role: str = "interviewee"
+    role: Literal["recruiter", "interviewee"] = "interviewee"
 
 
 class TokenOut(BaseModel):

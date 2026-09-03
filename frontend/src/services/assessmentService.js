@@ -34,10 +34,6 @@ export const assessmentService = {
   async publishAssessment(id) {
     return request(`/assessments/${id}/publish`, { method: "POST" });
   },
-
-  async listAssessmentQuestions(id) {
-    return request(`/assessments/${id}/questions`);
-  },
 };
 
 export const questionService = {
@@ -70,13 +66,6 @@ export const questionService = {
 };
 
 export const submissionService = {
-  async submitCode(payload) {
-    return request("/submissions/code", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
-
   async runCode(payload) {
     return request("/submissions/code/run", {
       method: "POST",
@@ -92,6 +81,10 @@ export const submissionService = {
 export const attemptService = {
   async startAttempt(assessmentId) {
     return request(`/assessments/${assessmentId}/start`, { method: "POST" });
+  },
+
+  async getAttemptStatus(assessmentId) {
+    return request(`/assessments/${assessmentId}/attempt-status`);
   },
 
   async getQuestions(assessmentId) {
@@ -137,6 +130,20 @@ export const invitationService = {
     });
   },
 
+  async createEmailInvitation(payload) {
+    return request("/invitations/email", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createEmailBulkInvitations(payload) {
+    return request("/invitations/email/bulk", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
   async acceptInvitation(id) {
     return request(`/invitations/${id}/accept`, { method: "POST" });
   },
@@ -144,11 +151,15 @@ export const invitationService = {
   async revokeInvitation(id) {
     return request(`/invitations/${id}`, { method: "DELETE" });
   },
+
+  async declineInvitation(id) {
+    return request(`/invitations/${id}/decline`, { method: "POST" });
+  },
 };
 
 export const notificationService = {
-  async listNotifications(userId) {
-    return request(`/notifications?user_id=${userId}`);
+  async listNotifications() {
+    return request("/notifications");
   },
 
   async markAsRead(id) {
@@ -161,9 +172,26 @@ export const resultService = {
     return request(`/assessments/${assessmentId}/results`);
   },
 
+  async listMyResults() {
+    return request("/me/results");
+  },
+
   async releaseGrades(assessmentId) {
     return request(`/assessments/${assessmentId}/release-grades`, {
       method: "POST",
+    });
+  },
+};
+
+export const feedbackService = {
+  async getFeedbackForResult(resultId) {
+    return request(`/results/${resultId}/feedback`);
+  },
+
+  async createFeedback(payload) {
+    return request("/feedback", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
   },
 };

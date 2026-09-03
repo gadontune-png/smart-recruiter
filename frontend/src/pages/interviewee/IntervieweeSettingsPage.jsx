@@ -1,13 +1,61 @@
 import { useState } from "react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import { Select, Input } from "../../components/forms";
+import { Input } from "../../components/forms";
 import { useAuth } from "../../hooks/useAuth";
+import { authService } from "../../services/authService";
 import "../recruiter/recruiter.css";
 
 function IntervieweeSettingsPage() {
   const { user } = useAuth();
+  const [fullName, setFullName] = useState(user?.full_name || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {};
+      if (fullName && fullName !== user?.full_name) payload.full_name = fullName;
+      if (newPassword) {
+        if (!currentPassword) {
+          setError("Current password is required to change password.");
+          setSaving(false);
+          return;
+        }
+        payload.current_password = currentPassword;
+        payload.new_password = newPassword;
+      }
+      if (Object.keys(payload).length === 0) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+        setSaving(false);
+        return;
+      }
+      const updated = await authService.updateProfile(payload);
+      if (updated?.full_name) {
+        localStorage.setItem(
+          "sr_auth",
+          JSON.stringify({
+            ...JSON.parse(localStorage.getItem("sr_auth") || "{}"),
+            user: { ...user, full_name: updated.full_name },
+          })
+        );
+      }
+      setSaved(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(err.message || "Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
@@ -22,27 +70,39 @@ function IntervieweeSettingsPage() {
           <Badge variant="info">Candidate</Badge>
         </div>
         <div className="panel-body">
-          <Input label="Full Name" defaultValue={user?.name || ""} />
-          <Input label="Email Address" defaultValue={user?.email || ""} />
-          <Select
-            label="Practice Focus Area"
-            defaultValue="Frontend"
-            options={[
-              { value: "Frontend", label: "Frontend" },
-              { value: "Backend", label: "Backend" },
-              { value: "DevOps", label: "DevOps" },
-              { value: "Algorithms", label: "Algorithms" },
-            ]}
+          <Input
+            label="Full Name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
           />
-          <Button
-            onClick={() => {
-              setSaved(true);
-              setTimeout(() => setSaved(false), 3000);
-            }}
-          >
-            Save Changes
+          <Input label="Email Address" value={user?.email || ""} disabled />
+          <Input
+            label="Current Password"
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder="Required to change password"
+          />
+          <Input
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Leave blank to keep current"
+          />
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
-          {saved && <p style={{ color: "var(--color-success)", marginTop: "var(--space-3)" }}>Settings saved.</p>}
+          {saved && (
+            <p style={{ color: "var(--color-success)", marginTop: "var(--space-3)" }}>
+              Settings saved.
+            </p>
+          )}
+          {error && (
+            <p style={{ color: "var(--color-danger)", marginTop: "var(--space-3)" }}>
+              {error}
+            </p>
+          )}
         </div>
       </div>
     </div>

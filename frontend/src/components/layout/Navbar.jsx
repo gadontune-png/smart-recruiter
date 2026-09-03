@@ -1,14 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { ROLES, ROUTES } from "../../utils/constants";
+import { notificationService } from "../../services/assessmentService";
 
 function Topbar({ onToggleSidebar }) {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [query, setQuery] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.user_id) return;
+    let cancelled = false;
+    const load = () => {
+      notificationService
+        .listNotifications()
+        .then((data) => {
+          if (cancelled) return;
+          const items = Array.isArray(data) ? data : [];
+          setUnreadCount(items.filter((n) => !n.is_read).length);
+        })
+        .catch(() => {
+          if (!cancelled) setUnreadCount(0);
+        });
+    };
+    load();
+    const interval = window.setInterval(load, 20000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [user?.user_id]);
 
   const home =
     user?.role === ROLES.RECRUITER
@@ -29,12 +54,13 @@ function Topbar({ onToggleSidebar }) {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "";
 
-  const initials = user?.name
-    ?.split(" ")
+  const displayName = user?.full_name || user?.name || "User";
+  const initials = displayName
+    .split(" ")
     .map((part) => part[0])
     .slice(0, 2)
     .join("")
-    .toUpperCase() ?? "U";
+    .toUpperCase();
 
   return (
     <header className="topbar">
@@ -86,13 +112,16 @@ function Topbar({ onToggleSidebar }) {
               aria-label="Notifications"
             >
               <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="topbar-notif-badge">{unreadCount}</span>
+              )}
             </Link>
             <Link to={ROUTES.PROFILE} className="topbar-user" aria-label="View profile">
               <span className="avatar" aria-hidden="true">
                 {initials}
               </span>
               <div className="topbar-user-meta">
-                <strong>{user.name}</strong>
+                <strong>{displayName}</strong>
                 <span>{roleLabel}</span>
               </div>
             </Link>

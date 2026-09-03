@@ -8,17 +8,19 @@ import {
   assessmentService,
   attemptService,
 } from "../../services/assessmentService";
+import { ROUTES } from "../../utils/constants";
 import "./AssessmentPage.css";
 
 const mapQuestionType = (backendType) => {
-  switch (backendType) {
-    case "MULTIPLE_CHOICE":
+  switch ((backendType || "").toLowerCase()) {
     case "multiple_choice":
       return "mcq";
-    case "CODING":
     case "coding":
       return "coding";
-    case "FREE_TEXT":
+    case "whiteboard":
+      return "whiteboard";
+    case "subjective":
+    case "free_text":
     case "text":
     default:
       return "text";
@@ -51,6 +53,7 @@ function AssessmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
+  const [attemptInfo, setAttemptInfo] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -58,9 +61,14 @@ function AssessmentPage() {
         setLoading(true);
         const assessData = await assessmentService.getAssessment(id);
         setAssessment(assessData);
+        setQuestions(Array.isArray(assessData.questions) ? assessData.questions : []);
         if (assessData.time_limit_minutes) {
           setTimeLeft(assessData.time_limit_minutes * 60);
         }
+        const status = await attemptService
+          .getAttemptStatus(id)
+          .catch(() => null);
+        if (status) setAttemptInfo(status);
       } catch (err) {
         setError(err.message || "Failed to load assessment");
       } finally {
@@ -191,13 +199,43 @@ function AssessmentPage() {
   const handleStart = async () => {
     try {
       setStartError(null);
+
+      const typeMap = {
+        MULTIPLE_CHOICE: "mcq",
+        multiple_choice: "mcq",
+        CODING: "coding",
+        coding: "coding",
+        WHITEBOARD: "whiteboard",
+        whiteboard: "whiteboard",
+        SUBJECTIVE: "text",
+        subjective: "text",
+        FREE_TEXT: "text",
+        text: "text",
+      };
+      const isWhiteboardAssessment = (assessment?.questions || []).some(
+        (q) =>
+          typeMap[q.question_type] === "coding" ||
+          typeMap[q.question_type] === "whiteboard"
+      );
+
+      if (isWhiteboardAssessment) {
+        navigate(ROUTES.WHITEBOARD_ASSESSMENT.replace(":assessmentId", id));
+        return;
+      }
+
       const attempt = await attemptService.startAttempt(id);
       setAttemptId(attempt?.id ?? attempt?.attempt_id ?? null);
       if (typeof attempt?.remaining_seconds === "number") {
         setTimeLeft(attempt.remaining_seconds);
       }
-      const questionsData = await attemptService.getQuestions(id);
-      setQuestions(Array.isArray(questionsData) ? questionsData : []);
+      try {
+        const questionsData = await attemptService.getQuestions(id);
+        if (Array.isArray(questionsData) && questionsData.length > 0) {
+          setQuestions(questionsData);
+        }
+      } catch {
+        // keep preloaded questions if the attempt-questions fetch fails
+      }
       setStarted(true);
     } catch (err) {
       setStartError(err.message || "Failed to start the assessment");
@@ -237,7 +275,7 @@ function AssessmentPage() {
     );
   }
 
-  if (mappedQuestions.length === 0) {
+  if (started && mappedQuestions.length === 0) {
     return (
       <div className="assessment-page assessment-center">
         <Card padded className="assessment-intro-card">
@@ -245,6 +283,25 @@ function AssessmentPage() {
           <h1>No questions available for this assessment.</h1>
           <Button onClick={() => navigate("/interviewee/assessments")}>
             Back to Assessments
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!started && attemptInfo?.locked && !attemptInfo?.active) {
+    return (
+      <div className="assessment-page assessment-center">
+        <Card padded className="assessment-intro-card">
+          <Badge variant="success">Completed</Badge>
+          <h1>Assessment already submitted</h1>
+          <p>
+            You have used all of your {attemptInfo.max_attempts} attempt
+            {attemptInfo.max_attempts === 1 ? "" : "s"} for this assessment. It is
+            now locked for further attempts.
+          </p>
+          <Button onClick={() => navigate("/interviewee/results")}>
+            View My Results
           </Button>
         </Card>
       </div>
@@ -366,29 +423,37 @@ function AssessmentPage() {
 
             {question.type === "mcq" && (
               <>
-                <p className="question-prompt">{question.title}</p>
-                <div className="answer-options">
-                  {question.options.map((option, index) => (
-                    <label
-                      key={option.option_id ?? option.option_text}
-                      className={`answer-option ${
-                        currentAnswerObj.optionId === option.option_id ? "selected" : ""
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${question.id}`}
-                        value={option.option_text}
-                        checked={currentAnswerObj.optionId === option.option_id}
-                        onChange={() => updateAnswer(option.option_text)}
-                      />
-                      <span className="option-marker">
-                        {String.fromCharCode(65 + index)}
-                      </span>
-                      <span>{option.option_text}</span>
-                    </label>
-                  ))}
-                </div>
+                {question.question && question.question !== question.title && (
+                  <p className="question-prompt">{question.question}</p>
+                )}
+                {question.options.length > 0 ? (
+                  <div className="answer-options">
+                    {question.options.map((option, index) => (
+                      <label
+                        key={option.option_id ?? option.option_text}
+                        className={`answer-option ${
+                          currentAnswerObj.optionId === option.option_id ? "selected" : ""
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`question-${question.id}`}
+                          value={option.option_text}
+                          checked={currentAnswerObj.optionId === option.option_id}
+                          onChange={() => updateAnswer(option.option_text)}
+                        />
+                        <span className="option-marker">
+                          {String.fromCharCode(65 + index)}
+                        </span>
+                        <span>{option.option_text}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="question-prompt">
+                    No answer options are available for this question.
+                  </p>
+                )}
               </>
             )}
 

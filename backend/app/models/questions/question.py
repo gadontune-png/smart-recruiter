@@ -27,6 +27,7 @@ class Question(Base):
     starter_code = Column(Text, nullable=True)
     language = Column(String(50), nullable=True)
     timelimit_seconds = Column(Integer, nullable=True)
+    difficulty = Column(String(20), nullable=True, default="Medium")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

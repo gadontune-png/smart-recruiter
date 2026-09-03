@@ -1,37 +1,19 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_recruiter
 from app.models.questions.question import Question
+from app.models.questions.option import QuestionOption
+from app.models.user import User
 from app.schemas.question import QuestionCreate, QuestionUpdate, QuestionOut
 from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/api/questions", tags=["questions"])
 
 notification_service = NotificationService()
-
-
-class QuestionEmailRequest(BaseModel):
-    recipient_email: str
-    recipient_name: str
-    assessment_title: str
-    question_text: str
-    question_type: str
-    points: int
-    deadline: str = None
-
-
-class BulkQuestionEmailRequest(BaseModel):
-    recipient_emails: List[str]
-    recipient_names: List[str]
-    assessment_title: str
-    question_text: str
-    question_type: str
-    points: int
-    deadline: str = None
 
 
 @router.get("", response_model=List[QuestionOut])
@@ -53,10 +35,13 @@ def get_question(question_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=QuestionOut, status_code=201)
 @router.post("/", response_model=QuestionOut, status_code=201)
-def create_question(payload: QuestionCreate, db: Session = Depends(get_db)):
+def create_question(
+    payload: QuestionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
     data = payload.model_dump()
     options_data = data.pop("options", [])
-    data.pop("difficulty", None)
     if not data.get("assessment_id"):
         raise HTTPException(status_code=400, detail="assessment_id is required")
     question = Question(**{k: v for k, v in data.items() if k in Question.__table__.columns.keys()})
@@ -65,7 +50,7 @@ def create_question(payload: QuestionCreate, db: Session = Depends(get_db)):
     for option_data in options_data:
         question.options.append(
             QuestionOption(
-                option_text=option_data.option_text,
+                option_text=option_data["option_text"],
                 is_correct=option_data.get("is_correct", False),
             )
         )
@@ -75,7 +60,12 @@ def create_question(payload: QuestionCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{question_id}", response_model=QuestionOut)
-def update_question(question_id: int, payload: QuestionUpdate, db: Session = Depends(get_db)):
+def update_question(
+    question_id: int,
+    payload: QuestionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
     question = db.query(Question).filter(Question.question_id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -88,7 +78,11 @@ def update_question(question_id: int, payload: QuestionUpdate, db: Session = Dep
 
 
 @router.delete("/{question_id}")
-def delete_question(question_id: int, db: Session = Depends(get_db)):
+def delete_question(
+    question_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
+):
     question = db.query(Question).filter(Question.question_id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -99,39 +93,53 @@ def delete_question(question_id: int, db: Session = Depends(get_db)):
 
 @router.post("/send-by-email")
 def send_question_by_email(
-    payload: QuestionEmailRequest,
+    recipient_email: str,
+    recipient_name: str,
+    assessment_title: str,
+    question_text: str,
+    question_type: str,
+    points: int,
+    deadline: str = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
 ):
     success = notification_service.send_question_assigned_email(
-        recipient_email=payload.recipient_email,
-        recipient_name=payload.recipient_name,
-        assessment_title=payload.assessment_title,
-        question_text=payload.question_text,
-        question_type=payload.question_type,
-        points=payload.points,
-        deadline=payload.deadline,
+        recipient_email,
+        recipient_name,
+        assessment_title,
+        question_text,
+        question_type,
+        points,
+        deadline,
     )
     return {
         "success": success,
-        "message": "Question sent to email successfully" if success else "Failed to send email",
+        "message": "Question notification email sent successfully" if success else "Failed to send email",
     }
 
 
 @router.post("/send-by-email/bulk")
 def send_questions_bulk_by_email(
-    payload: BulkQuestionEmailRequest,
+    recipient_emails: List[str],
+    recipient_names: List[str],
+    assessment_title: str,
+    question_text: str,
+    question_type: str,
+    points: int,
+    deadline: str = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_recruiter),
 ):
     results = []
-    for email, name in zip(payload.recipient_emails, payload.recipient_names):
+    for email, name in zip(recipient_emails, recipient_names):
         success = notification_service.send_question_assigned_email(
             recipient_email=email,
             recipient_name=name,
-            assessment_title=payload.assessment_title,
-            question_text=payload.question_text,
-            question_type=payload.question_type,
-            points=payload.points,
-            deadline=payload.deadline,
+            assessment_title=assessment_title,
+            question_text=question_text,
+            question_type=question_type,
+            points=points,
+            deadline=deadline,
         )
         results.append({"email": email, "success": success})
 

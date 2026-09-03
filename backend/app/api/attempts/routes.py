@@ -12,6 +12,7 @@ from app.models.attempts.attempt import Attempt, AttemptStatus
 from app.models.invitations.invitation import Invitation, InvitationStatus
 from app.models.questions.option import QuestionOption
 from app.models.questions.question import Question
+from app.models.results.result import Result
 from app.models.user import User
 from app.schemas.attempt import AnswerOut, AnswerSave, AttemptOut
 from app.schemas.question import CandidateQuestionOut
@@ -41,6 +42,32 @@ def _active_attempt(db, assessment_id, user_id):
         .order_by(Attempt.attempt_id.desc())
         .first()
     )
+
+
+def _used_attempt_count(db, assessment_id, user_id):
+    return (
+        db.query(Attempt)
+        .filter(
+            Attempt.assessment_id == assessment_id,
+            Attempt.interviewee_id == user_id,
+            Attempt.status.in_([AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED]),
+        )
+        .count()
+    )
+
+
+def _latest_grade_released(db, assessment_id, user_id) -> bool:
+    result = (
+        db.query(Result)
+        .filter(
+            Result.assessment_id == assessment_id,
+            Result.interviewee_id == user_id,
+            Result.grade_released.is_(True),
+        )
+        .order_by(Result.id.desc())
+        .first()
+    )
+    return result is not None
 
 
 def _assert_enrolled(db, assessment_id, user: User):
@@ -81,6 +108,20 @@ def start_attempt(
 ):
     assessment = _assert_enrolled(db, assessment_id, current_user)
     attempt = _active_attempt(db, assessment_id, current_user.user_id)
+
+    max_attempts = assessment.max_attempts or 1
+    used_attempts = _used_attempt_count(db, assessment_id, current_user.user_id)
+    if _latest_grade_released(db, assessment_id, current_user.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your submission has been graded. This assessment is now closed.",
+        )
+    if used_attempts >= max_attempts:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You have used all {max_attempts} attempt(s). Assessment is locked.",
+        )
+
     if attempt is None:
         attempt = Attempt(
             assessment_id=assessment_id,
@@ -112,6 +153,32 @@ def start_attempt(
         attempt, assessment.time_limit_minutes
     )
     return result
+
+
+@router.get("/api/assessments/{assessment_id}/attempt-status")
+def get_attempt_status(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Candidate-facing status: how many attempts used, if active, if locked."""
+    max_attempts = 1
+    assessment = db.query(Assessment).filter(Assessment.assessment_id == assessment_id).first()
+    if assessment:
+        max_attempts = assessment.max_attempts or 1
+    used = _used_attempt_count(db, assessment_id, current_user.user_id)
+    active = _active_attempt(db, assessment_id, current_user.user_id)
+    graded_released = _latest_grade_released(db, assessment_id, current_user.user_id)
+    locked = used >= max_attempts or graded_released
+    return {
+        "assessment_id": assessment_id,
+        "max_attempts": max_attempts,
+        "used_attempts": used,
+        "remaining_attempts": max(0, max_attempts - used),
+        "locked": locked,
+        "active": active is not None,
+        "grade_released": graded_released,
+    }
 
 
 @router.get(

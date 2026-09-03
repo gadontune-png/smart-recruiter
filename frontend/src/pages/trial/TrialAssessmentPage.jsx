@@ -6,8 +6,8 @@ import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import {
   assessmentService,
-  questionService,
 } from "../../services/assessmentService";
+import { attemptService } from "../../services/assessmentService";
 import "./TrialAssessmentPage.css";
 
 function TrialAssessmentPage() {
@@ -20,6 +20,7 @@ function TrialAssessmentPage() {
   const [hint, setHint] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [assessment, setAssessment] = useState(null);
+  const [attemptId, setAttemptId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
 
@@ -35,10 +36,22 @@ function TrialAssessmentPage() {
 
         setAssessment(published);
 
-        const qData = await questionService.listQuestions(published.assessment_id);
+        let attempt = null;
+        try {
+          attempt = await attemptService.startAttempt(published.assessment_id);
+        } catch {
+          attempt = null;
+        }
+        setAttemptId(attempt?.id ?? attempt?.attempt_id ?? null);
+
+        const qData = attempt
+          ? await attemptService.getQuestions(published.assessment_id)
+          : [];
         setQuestions(Array.isArray(qData) ? qData : []);
 
-        if (published.time_limit_minutes) {
+        if (typeof attempt?.remaining_seconds === "number") {
+          setTimeLeft(attempt.remaining_seconds);
+        } else if (published.time_limit_minutes) {
           setTimeLeft(published.time_limit_minutes * 60);
         }
       } catch {
@@ -56,6 +69,9 @@ function TrialAssessmentPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          if (attemptId) {
+            attemptService.submitAttempt(attemptId).catch(() => {});
+          }
           setSubmitted(true);
           return 0;
         }
@@ -63,7 +79,7 @@ function TrialAssessmentPage() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [started, submitted, timeLeft]);
+  }, [started, submitted, timeLeft, attemptId]);
 
   const question = questions[currentQuestion] || null;
   const currentAnswer = question ? (answers[question.question_id] || "") : "";
@@ -73,11 +89,40 @@ function TrialAssessmentPage() {
     ? Math.round(((currentQuestion + 1) / questionCount) * 100)
     : 0;
 
+  const persistAnswer = async (question, value) => {
+    if (!attemptId || !question?.question_id) return;
+    const type = question.question_type;
+    const isMcq =
+      type === "MULTIPLE_CHOICE" || type === "multiple_choice";
+    const isCoding = type === "CODING" || type === "coding";
+    const optionId = isMcq ? getOptionId(question, value) : null;
+    try {
+      await attemptService.saveAnswer(attemptId, {
+        question_id: question.question_id,
+        ...(isMcq ? { selected_option_id: optionId } : {}),
+        ...(isCoding
+          ? { code_submission: value, programming_language: "javascript" }
+          : {}),
+        ...(!isMcq && !isCoding ? { answer_text: value } : {}),
+      });
+    } catch {
+      // ignore transient save errors
+    }
+  };
+
+  const getOptionId = (question, optionText) => {
+    const option = parseOptions(question).find(
+      (o) => o.option_text === optionText
+    );
+    return option ? option.option_id : null;
+  };
+
   const updateAnswer = (value) => {
     setAnswers((previousAnswers) => ({
       ...previousAnswers,
       [question.question_id]: value,
     }));
+    persistAnswer(question, value);
   };
 
   const handleNext = () => {
@@ -98,7 +143,14 @@ function TrialAssessmentPage() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (attemptId) {
+      try {
+        await attemptService.submitAttempt(attemptId);
+      } catch {
+        // proceed to completion screen regardless
+      }
+    }
     setSubmitted(true);
   };
 

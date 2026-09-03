@@ -23,6 +23,7 @@ function mapBackendQuestion(q) {
     starter_code: q.starter_code || "",
     time_limit: q.timelimit_seconds || 0,
     difficulty: q.difficulty || "Medium",
+    options: Array.isArray(q.options) && q.options.length > 0 ? q.options : [],
     _isNew: false,
   };
 }
@@ -45,11 +46,12 @@ function RecruiterQuestionsPage() {
   const [prompt, setPrompt] = useState("");
   const [qType, setQType] = useState("Multiple Choice");
   const [difficulty, setDifficulty] = useState("Medium");
-  const [points, setPoints] = useState("10 pts");
+  const [points, setPoints] = useState("10");
   const [options, setOptions] = useState(["", "", "", ""]);
   const [kataId, setKataId] = useState("");
   const [kataBusy, setKataBusy] = useState(false);
   const [kataError, setKataError] = useState("");
+  const [saveStatus, setSaveStatus] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +101,7 @@ function RecruiterQuestionsPage() {
     setTitle(q.title);
     setPrompt(q.description);
     setQType(q.question_type === "CODING" ? "Coding Challenge" : q.question_type === "FREE_TEXT" ? "Free Text" : "Multiple Choice");
-    setPoints(`${q.points} pts`);
+    setPoints(`${q.points ?? 0}`);
     setDifficulty(q.difficulty || "Medium");
     setOptions(Array.isArray(q.options) && q.options.length > 0 ? q.options.map((o) => o.option_text) : ["", "", "", ""]);
   }
@@ -150,19 +152,28 @@ function RecruiterQuestionsPage() {
       return;
     }
 
-    const pointsValue = parseInt(points.replace(" pts", ""), 10) || 0;
+    let pointsValue = parseInt(points, 10);
+    if (Number.isNaN(pointsValue) || pointsValue < 0) pointsValue = 0;
+    if (pointsValue > 100) pointsValue = 100;
+
+    const normalizedType = qType === "Coding Challenge" ? "CODING" : qType === "Free Text" ? "FREE_TEXT" : "MULTIPLE_CHOICE";
     const payload = {
       assessment_id: Number(selectedAssessment),
       question_text: title || "Untitled question",
-      question_type: qType === "Coding Challenge" ? "CODING" : qType === "Free Text" ? "FREE_TEXT" : "MULTIPLE_CHOICE",
+      question_type: normalizedType,
       points: pointsValue,
       description: prompt || "",
       difficulty: difficulty || "Medium",
+      language: selected.language || (normalizedType === "CODING" ? "javascript" : null),
+      starter_code: selected.starter_code || "",
+      timelimit_seconds: selected.time_limit || 0,
       options: qType === "Multiple Choice"
         ? options.filter((option) => option.trim() !== "").map((option) => ({ option_text: option, is_correct: false }))
         : [],
     };
 
+    setSaveStatus("saving");
+    setError(null);
     try {
       let saved;
       if (selected._isNew || !selected.question_id) {
@@ -173,7 +184,10 @@ function RecruiterQuestionsPage() {
           question_type: payload.question_type,
           points: payload.points,
           description: payload.description,
-          options: payload.options,
+          difficulty: payload.difficulty,
+          language: payload.language,
+          starter_code: payload.starter_code,
+          timelimit_seconds: payload.timelimit_seconds,
         });
       }
       const normalized = Array.isArray(saved) ? saved[0] : saved;
@@ -192,8 +206,15 @@ function RecruiterQuestionsPage() {
               : q
           )
         );
+        setDifficulty(mapped.difficulty || difficulty);
+        setPoints(String(mapped.points));
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(""), 2500);
+      } else {
+        setSaveStatus("error");
       }
     } catch (err) {
+      setSaveStatus("error");
       setError(err.message || "Failed to save question");
     }
   }
@@ -402,16 +423,18 @@ function RecruiterQuestionsPage() {
                   { value: "Hard", label: "Hard" },
                 ]}
               />
-              <Select
+              <Input
                 label="Points Weight"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
                 value={points}
-                onChange={(event) => setPoints(event.target.value)}
-                options={[
-                  { value: "5 pts", label: "5 pts" },
-                  { value: "10 pts", label: "10 pts" },
-                  { value: "15 pts", label: "15 pts" },
-                  { value: "20 pts", label: "20 pts" },
-                ]}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPoints(value === "" ? "" : String(Math.max(0, Math.min(100, parseInt(value, 10) || 0))));
+                }}
+                hint="Points for this question (max 100)"
               />
             </div>
 
@@ -439,10 +462,20 @@ function RecruiterQuestionsPage() {
             </div>
 
             <div className="qb-editor-actions">
+              <span className={`qb-save-status ${saveStatus}`}>
+                {saveStatus === "saving" && "Saving..."}
+                {saveStatus === "saved" && "Saved ✓"}
+                {saveStatus === "error" && "Save failed"}
+              </span>
               <Button variant="secondary" onClick={() => { if (selectedId) handleSelect(selectedId); }}>
                 Cancel
               </Button>
-              <Button onClick={saveQuestion}>Save Question</Button>
+              <Button onClick={saveQuestion} disabled={saveStatus === "saving"}>
+                {(() => {
+                  const selected = questions.find((q) => q.id === selectedId);
+                  return selected && !selected._isNew && selected.question_id ? "Save Changes" : "Save Question";
+                })()}
+              </Button>
             </div>
           </div>
         </section>

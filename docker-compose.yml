@@ -1,0 +1,36 @@
+# Dev PostgreSQL for Smart Recruiter.
+#
+# Usage:  docker compose up -d            (start the DB)
+#         docker compose down             (stop it)
+#         docker compose down -v          (stop AND delete the data volume)
+#
+# Credentials: user=smartrecruiter, password=smartrecruiter, db=smartrecruiter
+# Host port:   5433  (mapped to container 5432)
+#              Picked to avoid clashing with Postgres installs already on :5432.
+#              Update DATABASE_URL in backend/.env if you change this port.
+#
+# The backend .env.example already points at this URL:
+#   postgresql+psycopg://smartrecruiter:smartrecruiter@localhost:5433/smartrecruiter
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smart-recruiter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: smartrecruiter
+      POSTGRES_PASSWORD: smartrecruiter
+      POSTGRES_DB: smartrecruiter
+    ports:
+      - "5433:5432"
+    volumes:
+      - smart_recruiter_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartrecruiter -d smartrecruiter"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  smart_recruiter_pg_data:
+    name: smart_recruiter_pg_data

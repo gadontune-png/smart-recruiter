@@ -1,36 +1,63 @@
 import { useState, useEffect } from "react";
-import { Bell, Check, ArrowRight, Building2, Play, X } from "lucide-react";
+import { Bell, Check, ArrowRight, Building2, Play, X, CheckCircle2 } from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
 import {
   invitationService,
   notificationService,
+  attemptService,
 } from "../../services/assessmentService";
 import { ROUTES } from "../../utils/constants";
 import "./interviewee-invitations.css";
 
 function IntervieweeInvitationsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [invitations, setInvitations] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [attemptStatus, setAttemptStatus] = useState({});
 
   useEffect(() => {
     invitationService
       .listInvitations()
-      .then((data) => setInvitations(Array.isArray(data) ? data : []))
+      .then(async (data) => {
+        const list = Array.isArray(data) ? data : [];
+        setInvitations(list);
+        const statuses = {};
+        await Promise.all(
+          list
+            .filter((inv) => inv.status === "ACCEPTED")
+            .map(async (inv) => {
+              const res = await attemptService
+                .getAttemptStatus(inv.assessment_id)
+                .catch(() => null);
+              if (res) statuses[inv.assessment_id] = res;
+            })
+        );
+        setAttemptStatus(statuses);
+      })
       .catch(() => setInvitations([]));
   }, []);
 
   useEffect(() => {
-    if (!user?.user_id) return;
     notificationService
-      .listNotifications(user.user_id)
+      .listNotifications()
       .then((data) => setNotifications(Array.isArray(data) ? data : []))
       .catch(() => setNotifications([]));
-  }, [user?.user_id]);
+  }, []);
+
+  const isSubmitted = (invitation) =>
+    attemptStatus[invitation.assessment_id]?.locked &&
+    !attemptStatus[invitation.assessment_id]?.active;
+
+  const attemptUsed = (invitation) => {
+    const a = attemptStatus[invitation.assessment_id];
+    return a && a.max_attempts > 0
+      ? `${a.used_attempts ?? 0}/${a.max_attempts} attempt${
+          a.max_attempts === 1 ? "" : "s"
+        } used`
+      : "";
+  };
 
   function accept(id) {
     const invitation = invitations.find((inv) => inv.invitation_id === id);
@@ -48,7 +75,16 @@ function IntervieweeInvitationsPage() {
   }
 
   function decline(id) {
-    setInvitations(invitations.filter((inv) => inv.invitation_id !== id));
+    invitationService
+      .declineInvitation(id)
+      .then(() => {
+        setInvitations((current) =>
+          current.map((inv) =>
+            inv.invitation_id === id ? { ...inv, status: "EXPIRED" } : inv
+          )
+        );
+      })
+      .catch(() => {});
   }
 
   function markAllRead() {
@@ -80,7 +116,13 @@ function IntervieweeInvitationsPage() {
             </div>
           ) : (
             <div className="invite-card-list">
-              {invitations.map((invitation) => (
+              {[...invitations]
+                .sort(
+                  (a, b) =>
+                    new Date(b.invited_at || 0).getTime() -
+                    new Date(a.invited_at || 0).getTime()
+                )
+                .map((invitation) => (
                 <div className="panel invite-card-row" key={invitation.invitation_id}>
                   <div className="company-badge">
                     <Building2 size={22} />
@@ -91,18 +133,35 @@ function IntervieweeInvitationsPage() {
                       <span>{invitation.description}</span>
                     </div>
                     <p className="invite-meta">
-                      Status: {invitation.status}
+                      Status:{" "}
+                      {isSubmitted(invitation) ? "Submitted" : invitation.status}
+                      {isSubmitted(invitation) && attemptUsed(invitation)
+                        ? ` (${attemptUsed(invitation)})`
+                        : ""}
                     </p>
                   </div>
                   <div className="invite-actions">
-                    <Button variant="secondary" onClick={() => decline(invitation.invitation_id)}>
-                      <X size={16} />
-                      Decline
-                    </Button>
-                    <Button onClick={() => accept(invitation.invitation_id)}>
-                      <Play size={16} />
-                      Accept &amp; Begin
-                    </Button>
+                    {isSubmitted(invitation) ? (
+                      <Button variant="secondary" disabled>
+                        <CheckCircle2 size={16} />
+                        Submitted
+                      </Button>
+                    ) : invitation.status === "PENDING" ? (
+                      <>
+                        <Button variant="secondary" onClick={() => decline(invitation.invitation_id)}>
+                          <X size={16} />
+                          Decline
+                        </Button>
+                        <Button onClick={() => accept(invitation.invitation_id)}>
+                          <Play size={16} />
+                          Accept &amp; Begin
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => navigate(ROUTES.ASSESSMENT.replace(":id", invitation.assessment_id))}>
+                        View Assessment
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -123,7 +182,13 @@ function IntervieweeInvitationsPage() {
             {notifications.length === 0 ? (
               <p className="no-notifications">You are all caught up.</p>
             ) : (
-              notifications.map((notification) => (
+              [...notifications]
+                .sort(
+                  (a, b) =>
+                    new Date(b.created_at || 0).getTime() -
+                    new Date(a.created_at || 0).getTime()
+                )
+                .map((notification) => (
                 <div className={`notif-item ${notification.is_read ? "read" : ""}`} key={notification.notification_id}>
                   <span className={`notif-dot ${notification.is_read ? "" : "unread"}`} />
                   <div>

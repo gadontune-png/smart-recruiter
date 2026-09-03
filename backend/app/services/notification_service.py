@@ -4,13 +4,35 @@ from email.mime.multipart import MIMEMultipart
 from typing import List, Optional
 from datetime import datetime
 
+from app.core.config import settings
+
 
 class EmailService:
-    def __init__(self, smtp_host: str = "localhost", smtp_port: int = 587, sender_email: str = "noreply@smartrecruiter.com", sender_name: str = "Smart Recruiter"):
-        self.smtp_host = smtp_host
-        self.smtp_port = smtp_port
-        self.sender_email = sender_email
-        self.sender_name = sender_name
+    def __init__(
+        self,
+        smtp_host: str = None,
+        smtp_port: int = None,
+        sender_email: str = None,
+        sender_name: str = None,
+        smtp_username: str = None,
+        smtp_password: str = None,
+        smtp_use_tls: bool = None,
+    ):
+        self.smtp_host = smtp_host or settings.smtp_host
+        self.smtp_port = smtp_port or settings.smtp_port
+        self.sender_email = sender_email or settings.sender_email
+        self.sender_name = sender_name or settings.sender_name
+        self.smtp_username = smtp_username if smtp_username is not None else settings.smtp_username
+        self.smtp_password = smtp_password if smtp_password is not None else settings.smtp_password
+        self.smtp_use_tls = settings.smtp_use_tls if smtp_use_tls is None else smtp_use_tls
+
+    def _connect(self):
+        server = smtplib.SMTP(self.smtp_host, self.smtp_port)
+        if self.smtp_use_tls:
+            server.starttls()
+        if self.smtp_username and self.smtp_password:
+            server.login(self.smtp_username, self.smtp_password)
+        return server
 
     def send_question_notification(
         self,
@@ -33,8 +55,7 @@ class EmailService:
             )
             msg.attach(MIMEText(body, "html"))
 
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
+            with self._connect() as server:
                 server.send_message(msg)
 
             return True
@@ -92,8 +113,7 @@ class EmailService:
 </html>"""
             msg.attach(MIMEText(body, "html"))
 
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
+            with self._connect() as server:
                 server.send_message(msg)
 
             return True
